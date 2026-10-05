@@ -25,3 +25,6 @@ dist-ssr
 
 # Ultralytics checkpoints downloaded by scripts/export_model.py
 .weights
+
+.vercel
+.env*
