@@ -1,0 +1,4 @@
+# Ultralytics checkpoints; only the exported .onnx files in public/models are deployed
+.weights
+node_modules
+dist
