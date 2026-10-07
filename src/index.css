@@ -197,6 +197,13 @@ body {
   justify-content: center;
 }
 
+.start-camera {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .status {
   position: absolute;
   left: 50%;
@@ -926,6 +933,31 @@ input[type='range'] {
     border-width: 1px 0 0;
     border-radius: 10px 10px 0 0;
     box-shadow: 0 -8px 24px rgb(0 0 0 / 30%);
+  }
+
+  /* One big camera button, with the two sample photos side by side beneath it. */
+  .empty .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: min(100%, 340px);
+    margin: 22px auto 0;
+  }
+
+  /* Phones can't drop files, so the hint only shows when it's reporting an error. */
+  .empty-hint:not([data-error]) {
+    display: none;
+  }
+
+  .empty .start-camera {
+    grid-column: 1 / -1;
+    padding: 14px;
+    font-size: 17px;
+  }
+
+  .empty .button.on-dark {
+    padding: 10px 8px;
+    font-size: 14px;
   }
 
   .masthead,

@@ -259,7 +259,17 @@ export default function App() {
             {notice ?? 'You can also drop an image anywhere in this frame.'}
           </p>
           <div className="actions">
-            <button type="button" className="button primary" onClick={startCamera}>
+            <button type="button" className="button primary start-camera" onClick={startCamera}>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M4 8h3l2-3h6l2 3h3v11H4z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
               Start camera
             </button>
             {SAMPLES.map((s) => (
