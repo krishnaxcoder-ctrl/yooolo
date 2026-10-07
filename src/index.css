@@ -1749,3 +1749,10 @@ input[type='range'] {
     display: none;
   }
 }
+
+/* On laptops the floating buttons sit over the sidebar's column; leave room to scroll its end clear of them. */
+@media (min-width: 881px) {
+  .panel {
+    padding-bottom: 230px;
+  }
+}
