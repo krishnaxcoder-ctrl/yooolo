@@ -295,6 +295,88 @@ export default function App() {
     frame?.surfaces && `walls ${formatMs(frame.surfaces.timings.inference)} ms`,
   ].filter(Boolean)
 
+  /** Hazards, engine and confidence: in the sidebar on laptops, in the settings sheet on phones. */
+  const coreSettings = (where: 'panel' | 'drawer') => (
+    <>
+      <div className="field">
+        <h2 className="field-label">Hazards</h2>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={showWalls}
+            disabled={!wallModel}
+            onChange={(e) => setWallsOn(e.target.checked)}
+          />
+          <span className="swatch" style={{ background: SURFACE_COLOR }} />
+          Highlight walls
+        </label>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={showStairs}
+            disabled={!stairClasses.length}
+            onChange={(e) => setStairsOn(e.target.checked)}
+          />
+          <span className="swatch" style={{ background: HAZARD_COLOR }} />
+          Highlight stairs
+        </label>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={showHazards}
+            disabled={!hazardModel}
+            onChange={(e) => setHazardsOn(e.target.checked)}
+          />
+          <span className="swatch" style={{ background: HAZARD_COLOR }} />
+          Detect ladders
+        </label>
+        <p className="hint">
+          {wallModel
+            ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}${hazardModel ? `, and ${hazardModel.label}, ${formatMB(hazardModel.bytes)}` : ''}.`
+            : 'No wall model is installed. Run "uv run scripts/export_model.py yolo26n-sem-ade20k" to add one.'}
+        </p>
+      </div>
+
+      {/* Laptops only: phones keep the automatic choice. */}
+      <fieldset className="field settings-engine">
+        <legend className="field-label">Runs on</legend>
+        <div className="segmented">
+          {ENGINES.map((e) => (
+            <label key={e.value}>
+              <input
+                type="radio"
+                name={`engine-${where}`}
+                value={e.value}
+                checked={engine === e.value}
+                onChange={() => setEngine(e.value)}
+              />
+              <span>{e.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="hint">{engineSummary(status)}</p>
+      </fieldset>
+
+      <div className="field">
+        <div className="field-row">
+          <label className="field-label" htmlFor={`conf-${where}`}>
+            Minimum object confidence
+          </label>
+          <output htmlFor={`conf-${where}`}>{Math.round(conf * 100)}%</output>
+        </div>
+        <input
+          id={`conf-${where}`}
+          type="range"
+          min={0.05}
+          max={0.95}
+          step={0.05}
+          value={conf}
+          onChange={(e) => setConf(Number(e.target.value))}
+        />
+      </div>
+    </>
+  )
+
   const viewport = (
     <Viewport
       objects={status.kind === 'ready' ? runners!.objects : null}
@@ -488,6 +570,8 @@ export default function App() {
           </div>
 
           <p className="privacy">Everything runs on this device. Video and images are never uploaded.</p>
+
+          {coreSettings('panel')}
         </aside>
       </main>
 
@@ -550,82 +634,7 @@ export default function App() {
                 ×
               </button>
             </div>
-            <div className="field">
-              <h2 className="field-label">Hazards</h2>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={showWalls}
-                  disabled={!wallModel}
-                  onChange={(e) => setWallsOn(e.target.checked)}
-                />
-                <span className="swatch" style={{ background: SURFACE_COLOR }} />
-                Highlight walls
-              </label>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={showStairs}
-                  disabled={!stairClasses.length}
-                  onChange={(e) => setStairsOn(e.target.checked)}
-                />
-                <span className="swatch" style={{ background: HAZARD_COLOR }} />
-                Highlight stairs
-              </label>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={showHazards}
-                  disabled={!hazardModel}
-                  onChange={(e) => setHazardsOn(e.target.checked)}
-                />
-                <span className="swatch" style={{ background: HAZARD_COLOR }} />
-                Detect ladders
-              </label>
-              <p className="hint">
-                {wallModel
-                  ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}${hazardModel ? `, and ${hazardModel.label}, ${formatMB(hazardModel.bytes)}` : ''}.`
-                  : 'No wall model is installed. Run "uv run scripts/export_model.py yolo26n-sem-ade20k" to add one.'}
-              </p>
-            </div>
-
-            {/* Laptops only: phones keep the automatic choice. */}
-            <fieldset className="field settings-engine">
-              <legend className="field-label">Runs on</legend>
-              <div className="segmented">
-                {ENGINES.map((e) => (
-                  <label key={e.value}>
-                    <input
-                      type="radio"
-                      name="engine"
-                      value={e.value}
-                      checked={engine === e.value}
-                      onChange={() => setEngine(e.value)}
-                    />
-                    <span>{e.label}</span>
-                  </label>
-                ))}
-              </div>
-              <p className="hint">{engineSummary(status)}</p>
-            </fieldset>
-
-            <div className="field">
-              <div className="field-row">
-                <label className="field-label" htmlFor="conf">
-                  Minimum object confidence
-                </label>
-                <output htmlFor="conf">{Math.round(conf * 100)}%</output>
-              </div>
-              <input
-                id="conf"
-                type="range"
-                min={0.05}
-                max={0.95}
-                step={0.05}
-                value={conf}
-                onChange={(e) => setConf(Number(e.target.value))}
-              />
-            </div>
+            <div className="settings-core">{coreSettings('drawer')}</div>
 
             <FamilySettings />
 

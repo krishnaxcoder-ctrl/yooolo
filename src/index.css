@@ -1738,3 +1738,14 @@ input[type='range'] {
     position: fixed;
   }
 }
+
+/* Hazards, engine and confidence: the sheet's copy shows on phones only (laptops have the sidebar's). */
+.settings-core {
+  display: contents;
+}
+
+@media (min-width: 881px) {
+  .settings-drawer .settings-core {
+    display: none;
+  }
+}
