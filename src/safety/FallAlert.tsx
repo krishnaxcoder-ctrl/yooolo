@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { canListen, listen, say, sosReply, type Listener } from '../navigation/voice'
+import { useVoiceReply } from '../navigation/useVoiceReply'
+import { canListen, say, sosReply } from '../navigation/voice'
 
 /** Long enough to hear the question and answer it out loud. */
 const COUNTDOWN_S = 15
@@ -30,8 +31,6 @@ export function FallAlert({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'countdown', left: COUNTDOWN_S })
   const okButton = useRef<HTMLButtonElement>(null)
   const [asked, setAsked] = useState(false)
-  const [heard, setHeard] = useState('')
-  const [micBlocked, setMicBlocked] = useState(false)
 
   useEffect(() => {
     okButton.current?.focus()
@@ -47,42 +46,16 @@ export function FallAlert({ onClose }: { onClose: () => void }) {
 
   const counting = phase.kind === 'countdown'
 
-  // Listen for "send" or "don't send" until the countdown ends, starting again after each pause.
-  useEffect(() => {
-    if (!counting || !asked || !canListen) return
-    let stopped = false
-    let listener: Listener | null = null
-    let retry: ReturnType<typeof setTimeout> | undefined
-    const start = () => {
-      if (stopped) return
-      listener = listen({
-        onText: setHeard,
-        onError: () => {
-          stopped = true
-          setMicBlocked(true)
-        },
-        onDone: (text) => {
-          listener = null
-          if (stopped) return
-          const reply = text ? sosReply(text) : null
-          if (reply === 'cancel') {
-            stopped = true
-            say('Okay. Glad you are safe.')
-            onClose()
-          } else if (reply === 'send') {
-            stopped = true
-            setPhase({ kind: 'sending' })
-          } else retry = setTimeout(start, 250)
-        },
-      })
-    }
-    start()
-    return () => {
-      stopped = true
-      clearTimeout(retry)
-      listener?.stop()
-    }
-  }, [counting, asked, onClose])
+  // Listen for "send" or "don't send" until the countdown ends.
+  const { heard, blocked: micBlocked } = useVoiceReply(counting && asked, (text) => {
+    const reply = sosReply(text)
+    if (reply === 'cancel') {
+      say('Okay. Glad you are safe.')
+      onClose()
+    } else if (reply === 'send') setPhase({ kind: 'sending' })
+    return reply !== null
+  })
+
   useEffect(() => {
     if (!counting) return
     const id = setInterval(

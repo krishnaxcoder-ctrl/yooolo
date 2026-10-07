@@ -109,7 +109,7 @@ export function VoiceButton({ onTrip }: { onTrip: (trip: TripRequest) => void })
         </svg>
         {/* Shown only on phones, where the button fills the bottom half of the screen. */}
         <span className="voice-label" aria-hidden="true">
-          {listening ? 'Listening… tap to stop' : 'Tap and say where to go'}
+          {listening ? 'Listening… tap to stop' : 'Go somewhere outside'}
         </span>
       </button>
     </div>

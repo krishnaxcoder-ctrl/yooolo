@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { HomeGuide } from './home/HomeGuide'
 import { Navigation } from './navigation/Navigation'
 import { askForMotionOnFirstTap, watchFalls } from './safety/fall'
 import { FallAlert } from './safety/FallAlert'
@@ -140,7 +141,8 @@ export default function App() {
     }
   }, [])
   // Set when the camera was turned on for a trip, so closing the trip turns it off again.
-  const cameraForTrip = useRef(false)
+  const cameraForGuide = useRef(false)
+  const [home, setHome] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const lastFrameAt = useRef<number | null>(null)
 
@@ -217,18 +219,29 @@ export default function App() {
     }
   }
 
-  function startTrip(next: TripRequest) {
-    setTrip(next)
+  /** Outdoor and indoor guidance both need the camera; turn it on unless it already is. */
+  function cameraForGuidance() {
     if (source?.kind === 'camera') return
-    cameraForTrip.current = true
+    cameraForGuide.current = true
     startCamera()
   }
 
+  function startTrip(next: TripRequest) {
+    setTrip(next)
+    cameraForGuidance()
+  }
+
+  function startHome() {
+    setHome(true)
+    cameraForGuidance()
+  }
+
   // Stable, because Navigation listens for Escape with it.
-  const closeTrip = useCallback(() => {
+  const closeGuide = useCallback(() => {
     setTrip(null)
-    if (!cameraForTrip.current) return
-    cameraForTrip.current = false
+    setHome(false)
+    if (!cameraForGuide.current) return
+    cameraForGuide.current = false
     setSource(null)
     setFrame(null)
     setFps(null)
@@ -357,7 +370,7 @@ export default function App() {
 
       <main className="workspace">
         <section className="stage" aria-label="Detection view">
-          {!trip && viewport}
+          {!trip && !home && viewport}
 
           <dl className="readout">
             <div className="metric">
@@ -531,7 +544,7 @@ export default function App() {
       {trip ? (
         <Navigation
           trip={trip}
-          onClose={closeTrip}
+          onClose={closeGuide}
           camera={viewport}
           detections={frame?.objects ?? null}
           names={names}
@@ -540,24 +553,42 @@ export default function App() {
           hazardBoxes={frame?.hazards ?? null}
           hazardNames={hazardNames}
         />
+      ) : home ? (
+        <HomeGuide
+          onClose={closeGuide}
+          camera={viewport}
+          objects={frame?.objects ?? null}
+          surfaces={frame?.surfaces ?? null}
+          objectNames={names}
+          surfaceNames={wallModel?.names ?? NO_NAMES}
+          stairClasses={showStairs ? stairClasses : NONE}
+        />
       ) : (
-        <VoiceButton onTrip={startTrip} />
-      )}
-
-      {!trip && (
-        <button
-          type="button"
-          className="shake-fab"
-          aria-label="Simulate a fall"
-          title="Simulate a fall"
-          disabled={shaking || fallen}
-          onClick={simulateShake}
-        >
-          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-            <rect x="8" y="3" width="8" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M4 8l-2 4 2 4M20 8l2 4-2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        // Phones split the bottom of the screen between these two; laptops float them in a corner.
+        <div className="dock">
+          <button
+            type="button"
+            className="shake-fab"
+            aria-label="Simulate a fall"
+            title="Simulate a fall"
+            disabled={shaking || fallen}
+            onClick={simulateShake}
+          >
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+              <rect x="8" y="3" width="8" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path d="M4 8l-2 4 2 4M20 8l2 4-2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button type="button" className="home-fab" aria-label="Find a room at home" onClick={startHome}>
+            <svg className="voice-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+              <path d="M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="voice-label" aria-hidden="true">
+              Find a room at home
+            </span>
+          </button>
+          <VoiceButton onTrip={startTrip} />
+        </div>
       )}
 
       {fallen && <FallAlert onClose={closeFallAlert} />}

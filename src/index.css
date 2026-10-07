@@ -523,9 +523,9 @@ input[type='range'] {
   white-space: nowrap;
 }
 
-/* Voice button */
+/* Dock: the shake demo, home and voice buttons, stacked in a corner on laptops */
 
-.voice {
+.dock {
   position: fixed;
   right: var(--gutter);
   bottom: var(--gutter);
@@ -534,6 +534,31 @@ input[type='range'] {
   flex-direction: column;
   align-items: flex-end;
   gap: 12px;
+}
+
+.voice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.home-fab {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--signal);
+  color: #10161d;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.home-fab:hover {
+  transform: scale(1.05);
 }
 
 .voice-fab {
@@ -875,17 +900,32 @@ input[type='range'] {
     padding: 16px;
   }
 
-  .voice {
+  /* The bottom quarter, split: going somewhere outside on the left, finding a room at home on the right. */
+  .dock {
     order: 2;
     position: relative;
     right: auto;
     bottom: auto;
     height: 25dvh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .voice {
+    order: 1;
+    height: 100%;
     align-items: stretch;
     gap: 0;
   }
 
-  .voice-fab {
+  .home-fab {
+    order: 2;
+    border-left: 1px solid rgb(0 0 0 / 15%);
+  }
+
+  .voice-fab,
+  .home-fab {
     flex: 1;
     min-height: 96px;
     width: 100%;
@@ -899,7 +939,8 @@ input[type='range'] {
     box-shadow: none;
   }
 
-  .voice-fab:hover {
+  .voice-fab:hover,
+  .home-fab:hover {
     transform: none;
   }
 
@@ -918,9 +959,12 @@ input[type='range'] {
 
   .voice-label {
     display: block;
+    max-width: 14ch;
     font: inherit;
-    font-size: 22px;
+    font-size: 19px;
     font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
   }
 
   /* The card floats over the bottom of the camera, so the button keeps its full quarter. */
@@ -1118,10 +1162,6 @@ input[type='range'] {
 /* Shake demo: phones have the real sensor, so the button is for laptops. */
 
 .shake-fab {
-  position: fixed;
-  right: var(--gutter);
-  bottom: calc(var(--gutter) + 72px);
-  z-index: 19;
   display: grid;
   place-items: center;
   width: 60px;
@@ -1180,4 +1220,46 @@ input[type='range'] {
   color: var(--muted);
   font-size: 15px;
   font-style: italic;
+}
+
+/* Home guide */
+
+.home-rooms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.home-rooms .button {
+  padding: 12px 10px;
+}
+
+.home-routes {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-routes li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.home-routes .voice-close {
+  margin: 0;
+}
+
+.home-sheet {
+  max-height: 55dvh;
+  overflow-y: auto;
 }
