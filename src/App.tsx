@@ -102,7 +102,7 @@ export default function App() {
   const [manifestError, setManifestError] = useState<string | null>(null)
   const [wallsOn, setWallsOn] = useState(true)
   const [source, setSource] = useState<Source | null>(null)
-  const [conf, setConf] = useState(0.35)
+  const [conf, setConf] = useState(0.15)
   const [frame, setFrame] = useState<Frame | null>(null)
   const [fps, setFps] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)

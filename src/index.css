@@ -826,3 +826,126 @@ input[type='range'] {
   background: var(--signal);
   color: #10161d;
 }
+
+.voice-label {
+  display: none;
+}
+
+@keyframes voice-breathe {
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+/* Phones: the camera fills the top half of the screen, one big voice button the next quarter,
+   and the settings start in the last quarter. The readout and header follow, a scroll away. */
+@media (max-width: 880px) {
+  .workspace,
+  .stage {
+    display: contents;
+  }
+
+  .viewport {
+    order: 1;
+    height: 50dvh;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+
+  .viewport[data-live] .media {
+    object-fit: cover;
+  }
+
+  .empty {
+    padding: 16px;
+  }
+
+  .voice {
+    order: 2;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    height: 25dvh;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .voice-fab {
+    flex: 1;
+    min-height: 96px;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .voice-fab:hover {
+    transform: none;
+  }
+
+  .voice-fab[data-listening] {
+    animation: none;
+  }
+
+  .voice-fab[data-listening] .voice-icon {
+    animation: voice-breathe 1.2s ease-in-out infinite;
+  }
+
+  .voice-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .voice-label {
+    display: block;
+    font: inherit;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  /* The card floats over the bottom of the camera, so the button keeps its full quarter. */
+  .voice-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    width: auto;
+    border-width: 1px 0 0;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 30%);
+  }
+
+  .masthead {
+    order: 6;
+  }
+
+  .readout {
+    order: 4;
+    margin-top: 28px;
+    margin-inline: var(--gutter);
+  }
+
+  .details {
+    order: 5;
+    margin: 18px var(--gutter) 28px;
+  }
+
+  .panel {
+    order: 3;
+    align-self: stretch;
+    margin: 0 var(--gutter) var(--gutter);
+  }
+}
+
+@media (max-width: 880px) and (prefers-reduced-motion: reduce) {
+  .voice-fab[data-listening] .voice-icon {
+    animation: none;
+  }
+}

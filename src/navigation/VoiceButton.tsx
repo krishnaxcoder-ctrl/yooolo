@@ -103,10 +103,14 @@ export function VoiceButton({ onTrip }: { onTrip: (trip: TripRequest) => void })
         aria-label={listening ? 'Stop listening' : 'Speak a destination'}
         onClick={toggle}
       >
-        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg className="voice-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
           <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
           <path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
+        {/* Shown only on phones, where the button fills the bottom half of the screen. */}
+        <span className="voice-label" aria-hidden="true">
+          {listening ? 'Listening… tap to stop' : 'Tap and say where to go'}
+        </span>
       </button>
     </div>
   )
