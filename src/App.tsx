@@ -3,7 +3,7 @@ import { Navigation } from './navigation/Navigation'
 import { VoiceButton } from './navigation/VoiceButton'
 import type { TripRequest } from './navigation/voice'
 import { Viewport, type Frame, type Source } from './Viewport'
-import { classColor, coverage, SURFACE_COLOR } from './yolo/draw'
+import { classColor, coverage, HAZARD_COLOR, SURFACE_COLOR } from './yolo/draw'
 import { YoloModel } from './yolo/model'
 import type { Engine, EnginePreference, ModelInfo } from './yolo/types'
 
@@ -18,6 +18,9 @@ const SAMPLES: { label: string; source: Source }[] = [
     source: { kind: 'image', url: `${import.meta.env.BASE_URL}samples/bus.jpg`, name: 'A street with a bus and four people' },
   },
 ]
+/** ADE20K classes that mean a change in floor level. */
+const STAIR_NAMES = ['stairs', 'stairway', 'step', 'escalator']
+const NONE: readonly number[] = []
 const ADD_MODEL_HINT = 'Run "uv run scripts/export_model.py yolo26n" to add one.'
 
 type ModelStatus =
@@ -101,6 +104,7 @@ export default function App() {
   const [engine, setEngine] = useState<EnginePreference>('auto')
   const [manifestError, setManifestError] = useState<string | null>(null)
   const [wallsOn, setWallsOn] = useState(true)
+  const [stairsOn, setStairsOn] = useState(true)
   const [source, setSource] = useState<Source | null>(null)
   const [conf, setConf] = useState(0.15)
   const [frame, setFrame] = useState<Frame | null>(null)
@@ -116,6 +120,10 @@ export default function App() {
   const model = detectModels.find((m) => m.id === modelId) ?? null
   const wallModel = models.find((m) => m.task === 'semantic' && m.names.includes('wall')) ?? null
   const wallClasses = useMemo(() => (wallModel ? [wallModel.names.indexOf('wall')] : []), [wallModel])
+  const stairClasses = useMemo(
+    () => (wallModel ? STAIR_NAMES.map((n) => wallModel.names.indexOf(n)).filter((i) => i >= 0) : []),
+    [wallModel],
+  )
   const names = model?.names ?? []
 
   useEffect(() => {
@@ -214,15 +222,18 @@ export default function App() {
 
   const live = source?.kind === 'camera'
   const showWalls = wallsOn && wallModel !== null
+  const showStairs = stairsOn && stairClasses.length > 0
+  // One surface model finds both walls and stairs, so it runs while either is wanted.
+  const runSurfaces = showWalls || showStairs
   const counts = tally(frame, names)
   const wallShare = showWalls && frame?.surfaces ? coverage(frame.surfaces, wallClasses) : null
   const loading =
     status.kind === 'loading' && model
       ? { label: model.label, fraction: status.fraction }
-      : showWalls && wallStatus.kind === 'loading'
-        ? { label: 'the wall model', fraction: wallStatus.fraction }
+      : runSurfaces && wallStatus.kind === 'loading'
+        ? { label: 'the wall and stairs model', fraction: wallStatus.fraction }
         : null
-  const errors = [status, showWalls ? wallStatus : null].flatMap((s) => (s?.kind === 'error' ? [s.message] : []))
+  const errors = [status, runSurfaces ? wallStatus : null].flatMap((s) => (s?.kind === 'error' ? [s.message] : []))
   const modelTimes = [
     frame?.objects && `objects ${formatMs(frame.objects.timings.inference)} ms`,
     frame?.surfaces && `walls ${formatMs(frame.surfaces.timings.inference)} ms`,
@@ -231,11 +242,12 @@ export default function App() {
   const viewport = (
     <Viewport
       objects={status.kind === 'ready' ? runners!.objects : null}
-      surfaces={showWalls && wallStatus.kind === 'ready' ? runners!.surfaces : null}
+      surfaces={runSurfaces && wallStatus.kind === 'ready' ? runners!.surfaces : null}
       source={source}
       conf={conf}
       names={names}
-      surfaceClasses={wallClasses}
+      surfaceClasses={showWalls ? wallClasses : NONE}
+      hazardClasses={showStairs ? stairClasses : NONE}
       onFrame={onFrame}
       onError={setNotice}
       onDropImage={openImage}
@@ -389,7 +401,7 @@ export default function App() {
           </div>
 
           <div className="field">
-            <h2 className="field-label">Walls</h2>
+            <h2 className="field-label">Walls and stairs</h2>
             <label className="toggle">
               <input
                 type="checkbox"
@@ -399,6 +411,16 @@ export default function App() {
               />
               <span className="swatch" style={{ background: SURFACE_COLOR }} />
               Highlight walls
+            </label>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={showStairs}
+                disabled={!stairClasses.length}
+                onChange={(e) => setStairsOn(e.target.checked)}
+              />
+              <span className="swatch" style={{ background: HAZARD_COLOR }} />
+              Highlight stairs
             </label>
             <p className="hint">
               {wallModel
@@ -449,7 +471,15 @@ export default function App() {
       </main>
 
       {trip ? (
-        <Navigation trip={trip} onClose={closeTrip} camera={viewport} detections={frame?.objects ?? null} names={names} />
+        <Navigation
+          trip={trip}
+          onClose={closeTrip}
+          camera={viewport}
+          detections={frame?.objects ?? null}
+          names={names}
+          surfaces={frame?.surfaces ?? null}
+          stairClasses={showStairs ? stairClasses : NONE}
+        />
       ) : (
         <VoiceButton onTrip={startTrip} />
       )}

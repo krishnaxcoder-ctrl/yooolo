@@ -1,4 +1,4 @@
-import type { DetectResult } from '../yolo/types'
+import type { DetectResult, SegmentResult } from '../yolo/types'
 
 export type Side = 'left' | 'ahead' | 'right'
 
@@ -36,11 +36,59 @@ export function findHazards(result: DetectResult, names: string[]): Hazard[] {
     if (size < (side === 'ahead' ? AHEAD_SIZE : SIDE_SIZE)) continue
     hazards.push({ name, side, size, near: size >= NEAR_SIZE })
   }
-  // Things straight ahead matter most, then whatever is closest.
-  return hazards.sort((a, b) => Number(b.side === 'ahead') - Number(a.side === 'ahead') || b.size - a.size)
+  return hazards.sort(mostPressing)
+}
+
+// Things straight ahead matter most, then whatever is closest.
+const mostPressing = (a: Hazard, b: Hazard) => Number(b.side === 'ahead') - Number(a.side === 'ahead') || b.size - a.size
+
+/** Shares of the walking zone that stairs must cover to be mentioned, and to count as close. */
+const STAIRS_SHARE = 0.04
+const STAIRS_NEAR_SHARE = 0.12
+
+/**
+ * Stairs from the surface model's label map. Only the bottom half of the frame counts: that's
+ * the ground just ahead, so a staircase across the room isn't announced.
+ */
+export function findStairs(seg: SegmentResult, classIds: readonly number[]): Hazard | null {
+  if (!classIds.length) return null
+  const isStair = new Uint8Array(256)
+  for (const id of classIds) isStair[id] = 1
+  const { labels, labelWidth: w, labelHeight: h } = seg
+  const top = Math.floor(h / 2)
+  const nearTop = Math.floor(h * 0.75)
+  let count = 0
+  let near = 0
+  let sumX = 0
+  for (let y = top; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!isStair[labels[y * w + x]]) continue
+      count++
+      sumX += x
+      if (y >= nearTop) near++
+    }
+  }
+  const share = count / ((h - top) * w)
+  if (share < STAIRS_SHARE) return null
+  const cx = sumX / count / w
+  const side: Side = cx < 0.33 ? 'left' : cx > 0.67 ? 'right' : 'ahead'
+  return { name: 'stairs', side, size: share, near: near / ((h - nearTop) * w) >= STAIRS_NEAR_SHARE }
+}
+
+/** Every hazard in the latest frame, from both models, most pressing first. */
+export function allHazards(
+  objects: DetectResult | null,
+  names: string[],
+  surfaces: SegmentResult | null,
+  stairClasses: readonly number[],
+): Hazard[] {
+  const stairs = surfaces ? findStairs(surfaces, stairClasses) : null
+  const hazards = objects ? findHazards(objects, names) : []
+  return (stairs ? [stairs, ...hazards] : hazards).sort(mostPressing)
 }
 
 export function hazardPhrase(h: Hazard): string {
+  if (h.name === 'stairs' && h.near) return h.side === 'ahead' ? 'Careful, stairs ahead.' : `Careful, stairs on your ${h.side}.`
   if (h.side === 'ahead') return h.near ? `Slow down, ${h.name} ahead.` : `${capitalize(h.name)} ahead.`
   return `${capitalize(h.name)} on your ${h.side}.`
 }

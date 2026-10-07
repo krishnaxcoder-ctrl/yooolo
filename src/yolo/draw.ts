@@ -3,6 +3,9 @@ import type { DetectResult, SegmentResult } from './types'
 /** Highlight color for segmented surfaces such as walls (the app's signal yellow). */
 export const SURFACE_COLOR = '#f2c230'
 const SURFACE_RGBA = [242, 194, 48, 125] as const
+/** Highlight color for surfaces that are trip hazards, such as stairs. */
+export const HAZARD_COLOR = '#ff4d6d'
+const HAZARD_RGBA = [255, 77, 109, 150] as const
 
 /**
  * A stable, well-spread hue per class (golden-angle steps around the color wheel).
@@ -17,12 +20,19 @@ export interface Overlay {
   surfaces: SegmentResult | null
   /** Label-map class ids to highlight, e.g. ADE20K "wall". */
   surfaceClasses: readonly number[]
+  /** Label-map class ids to highlight as hazards, e.g. ADE20K "stairs". */
+  hazardClasses: readonly number[]
   names: string[]
 }
 
 let maskCanvas: OffscreenCanvas | null = null
 
-function drawSurfaces(ctx: CanvasRenderingContext2D, seg: SegmentResult, classIds: readonly number[]) {
+function drawSurfaces(
+  ctx: CanvasRenderingContext2D,
+  seg: SegmentResult,
+  classIds: readonly number[],
+  [r, g, b, a]: readonly [number, number, number, number],
+) {
   const { labels, labelWidth: w, labelHeight: h } = seg
   maskCanvas ??= new OffscreenCanvas(w, h)
   if (maskCanvas.width !== w || maskCanvas.height !== h) {
@@ -34,7 +44,6 @@ function drawSurfaces(ctx: CanvasRenderingContext2D, seg: SegmentResult, classId
 
   const image = new ImageData(w, h)
   const pixels = new Uint32Array(image.data.buffer)
-  const [r, g, b, a] = SURFACE_RGBA
   const fill = ((a << 24) | (b << 16) | (g << 8) | r) >>> 0 // RGBA bytes on little-endian hardware
   for (let i = 0; i < labels.length; i++) if (highlight[labels[i]]) pixels[i] = fill
   maskCanvas.getContext('2d')!.putImageData(image, 0, 0)
@@ -84,7 +93,12 @@ export function drawOverlay(canvas: HTMLCanvasElement, overlay: Overlay) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
   ctx.clearRect(0, 0, canvas.width, canvas.height)
-  if (overlay.surfaces && overlay.surfaceClasses.length) drawSurfaces(ctx, overlay.surfaces, overlay.surfaceClasses)
+  if (overlay.surfaces && overlay.surfaceClasses.length) {
+    drawSurfaces(ctx, overlay.surfaces, overlay.surfaceClasses, SURFACE_RGBA)
+  }
+  if (overlay.surfaces && overlay.hazardClasses.length) {
+    drawSurfaces(ctx, overlay.surfaces, overlay.hazardClasses, HAZARD_RGBA)
+  }
   if (overlay.objects) drawBoxes(ctx, overlay.objects, overlay.names)
 }
 

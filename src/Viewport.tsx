@@ -25,6 +25,8 @@ interface ViewportProps {
   conf: number
   names: string[]
   surfaceClasses: readonly number[]
+  /** Label-map classes highlighted as hazards, e.g. stairs. */
+  hazardClasses: readonly number[]
   onFrame: (frame: Frame, live: boolean) => void
   onError: (message: string) => void
   onDropImage: (file: File) => void
@@ -64,6 +66,7 @@ export function Viewport({
   conf,
   names,
   surfaceClasses,
+  hazardClasses,
   onFrame,
   onError,
   onDropImage,
@@ -76,14 +79,14 @@ export function Viewport({
   const [dragging, setDragging] = useState(false)
 
   // The camera loop reads these on every frame without restarting.
-  const latest = useRef({ conf, names, surfaceClasses, onFrame, onError })
+  const latest = useRef({ conf, names, surfaceClasses, hazardClasses, onFrame, onError })
   useEffect(() => {
-    latest.current = { conf, names, surfaceClasses, onFrame, onError }
+    latest.current = { conf, names, surfaceClasses, hazardClasses, onFrame, onError }
   })
 
   const show = (frame: Frame, live: boolean) => {
-    const { names, surfaceClasses, onFrame } = latest.current
-    drawOverlay(canvasRef.current!, { objects: frame.objects, surfaces: frame.surfaces, surfaceClasses, names })
+    const { names, surfaceClasses, hazardClasses, onFrame } = latest.current
+    drawOverlay(canvasRef.current!, { objects: frame.objects, surfaces: frame.surfaces, surfaceClasses, hazardClasses, names })
     onFrame(frame, live)
   }
 
@@ -154,7 +157,7 @@ export function Viewport({
       cancelled = true
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [objects, surfaces, imageReady, conf, surfaceClasses])
+  }, [objects, surfaces, imageReady, conf, surfaceClasses, hazardClasses])
 
   const dragHasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files')
 

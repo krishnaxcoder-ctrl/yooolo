@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import type { DetectResult } from '../yolo/types'
-import { buzz, findHazards, HazardAnnouncer, hazardPhrase } from './hazards'
+import type { DetectResult, SegmentResult } from '../yolo/types'
+import { allHazards, buzz, HazardAnnouncer, hazardPhrase } from './hazards'
 import {
   findRoute,
   formatDistance,
@@ -59,9 +59,12 @@ interface NavigationProps {
   /** The latest object detections from the camera, used for spoken obstacle warnings. */
   detections: DetectResult | null
   names: string[]
+  /** The latest label map from the surface model, used to warn about stairs. */
+  surfaces: SegmentResult | null
+  stairClasses: readonly number[]
 }
 
-export function Navigation({ trip, onClose, camera, detections, names }: NavigationProps) {
+export function Navigation({ trip, onClose, camera, detections, names, surfaces, stairClasses }: NavigationProps) {
   const [plan, setPlan] = useState<Plan>({ kind: trip.from ? 'routing' : 'locating' })
   const [mode, setMode] = useState<Mode>('overview')
   const [progress, setProgress] = useState<Progress>(START)
@@ -174,14 +177,14 @@ export function Navigation({ trip, onClose, camera, detections, names }: Navigat
   }, [route, mode, progress, muted, trip.to])
 
   // Warn about obstacles the camera sees, between directions rather than over them.
-  const hazards = detections ? findHazards(detections, names) : []
+  const hazards = allHazards(detections, names, surfaces, stairClasses)
   useEffect(() => {
-    if (mode === 'overview' || !detections || speaking()) return
-    const h = announcer.current.pick(findHazards(detections, names))
+    if (mode === 'overview' || speaking()) return
+    const h = announcer.current.pick(allHazards(detections, names, surfaces, stairClasses))
     if (!h) return
     if (!muted) say(hazardPhrase(h))
     buzz(h)
-  }, [detections, names, mode, muted])
+  }, [detections, names, surfaces, stairClasses, mode, muted])
 
   // The inset sits just above the bottom sheet, whose height changes with its content.
   useEffect(() => {
