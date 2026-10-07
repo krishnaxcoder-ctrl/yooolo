@@ -254,7 +254,10 @@ export default function App() {
       {!source && !trip && (
         <div className="empty">
           <p className="empty-title">Point a camera at a room, or open a photo.</p>
-          <p className="empty-hint">You can also drop an image anywhere in this frame.</p>
+          {/* Phones hide the settings panel, so camera errors show here too. */}
+          <p className="empty-hint" data-error={notice ? '' : undefined}>
+            {notice ?? 'You can also drop an image anywhere in this frame.'}
+          </p>
           <div className="actions">
             <button type="button" className="button primary" onClick={startCamera}>
               Start camera

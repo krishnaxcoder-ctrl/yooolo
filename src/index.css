@@ -187,6 +187,12 @@ body {
   color: var(--viewport-muted);
 }
 
+.empty-hint[data-error] {
+  max-width: 40ch;
+  margin-inline: auto;
+  color: #ff8a80;
+}
+
 .empty .actions {
   justify-content: center;
 }
@@ -837,8 +843,8 @@ input[type='range'] {
   }
 }
 
-/* Phones: the camera fills the top half of the screen, one big voice button the next quarter,
-   and the settings start in the last quarter. The readout and header follow, a scroll away. */
+/* Phones: the camera fills the top three quarters of the screen and one big voice button the rest.
+   The header, readout and settings are desktop-only. */
 @media (max-width: 880px) {
   .workspace,
   .stage {
@@ -847,7 +853,7 @@ input[type='range'] {
 
   .viewport {
     order: 1;
-    height: 50dvh;
+    height: 75dvh;
     min-height: 0;
     max-height: none;
     aspect-ratio: auto;
@@ -922,25 +928,11 @@ input[type='range'] {
     box-shadow: 0 -8px 24px rgb(0 0 0 / 30%);
   }
 
-  .masthead {
-    order: 6;
-  }
-
-  .readout {
-    order: 4;
-    margin-top: 28px;
-    margin-inline: var(--gutter);
-  }
-
-  .details {
-    order: 5;
-    margin: 18px var(--gutter) 28px;
-  }
-
+  .masthead,
+  .readout,
+  .details,
   .panel {
-    order: 3;
-    align-self: stretch;
-    margin: 0 var(--gutter) var(--gutter);
+    display: none;
   }
 }
 
