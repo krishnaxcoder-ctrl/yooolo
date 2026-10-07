@@ -323,6 +323,26 @@ export default function App() {
           </div>
         </div>
       )}
+      {source?.kind === 'image' && (
+        <div className="viewport-actions">
+          <button type="button" className="button upload-photo photo-action" onClick={() => fileInput.current?.click()}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            New photo
+          </button>
+          <button type="button" className="button photo-action" aria-label="Close the photo" onClick={() => showSource(null)}>
+            ×
+          </button>
+        </div>
+      )}
       {!source && !trip && (
         <div className="empty">
           <p className="empty-title">Point a camera at a room, or open a photo.</p>

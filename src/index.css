@@ -1635,3 +1635,37 @@ input[type='range'] {
   outline: 2px solid var(--signal);
   outline-offset: 1px;
 }
+
+/* Over a photo: choose another, or close it. Top left, clear of the settings gear on phones. */
+.viewport-actions {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+
+.button.photo-action {
+  min-height: 40px;
+  border-color: transparent;
+  background: rgb(0 0 0 / 72%);
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+.button.photo-action:hover {
+  background: rgb(0 0 0 / 85%);
+}
+
+.button.photo-action.upload-photo {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+.button.photo-action[aria-label] {
+  width: 40px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
