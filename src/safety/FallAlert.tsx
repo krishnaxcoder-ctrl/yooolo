@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { say } from '../navigation/voice'
+import { canListen, listen, say, sosReply, type Listener } from '../navigation/voice'
 
-const COUNTDOWN_S = 10
+/** Long enough to hear the question and answer it out loud. */
+const COUNTDOWN_S = 15
+/** Start listening by now even if the browser never reports the question finished. */
+const PROMPT_MAX_MS = 8000
 
 /** Who the SOS goes to. A demo: nothing is actually sent. */
 const CONTACTS = [
@@ -26,14 +29,60 @@ function currentLocation(): Promise<string | null> {
 export function FallAlert({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>({ kind: 'countdown', left: COUNTDOWN_S })
   const okButton = useRef<HTMLButtonElement>(null)
+  const [asked, setAsked] = useState(false)
+  const [heard, setHeard] = useState('')
+  const [micBlocked, setMicBlocked] = useState(false)
 
   useEffect(() => {
     okButton.current?.focus()
     navigator.vibrate?.([400, 200, 400, 200, 400])
-    say(`Fall detected. Are you okay? Sending an S O S in ${COUNTDOWN_S} seconds. Tap I'm okay to cancel.`)
+    // Listening starts after the question, so the microphone doesn't hear the phone talking.
+    const fallback = setTimeout(() => setAsked(true), PROMPT_MAX_MS)
+    say('Fall detected. Are you okay? Say send to call for help, or say I am okay to cancel.', () => {
+      clearTimeout(fallback)
+      setAsked(true)
+    })
+    return () => clearTimeout(fallback)
   }, [])
 
   const counting = phase.kind === 'countdown'
+
+  // Listen for "send" or "don't send" until the countdown ends, starting again after each pause.
+  useEffect(() => {
+    if (!counting || !asked || !canListen) return
+    let stopped = false
+    let listener: Listener | null = null
+    let retry: ReturnType<typeof setTimeout> | undefined
+    const start = () => {
+      if (stopped) return
+      listener = listen({
+        onText: setHeard,
+        onError: () => {
+          stopped = true
+          setMicBlocked(true)
+        },
+        onDone: (text) => {
+          listener = null
+          if (stopped) return
+          const reply = text ? sosReply(text) : null
+          if (reply === 'cancel') {
+            stopped = true
+            say('Okay. Glad you are safe.')
+            onClose()
+          } else if (reply === 'send') {
+            stopped = true
+            setPhase({ kind: 'sending' })
+          } else retry = setTimeout(start, 250)
+        },
+      })
+    }
+    start()
+    return () => {
+      stopped = true
+      clearTimeout(retry)
+      listener?.stop()
+    }
+  }, [counting, asked, onClose])
   useEffect(() => {
     if (!counting) return
     const id = setInterval(
@@ -118,6 +167,17 @@ export function FallAlert({ onClose }: { onClose: () => void }) {
                 Send SOS now
               </button>
             </div>
+            {phase.kind === 'countdown' && (
+              <p className="sos-listen" aria-live="polite">
+                {!canListen || micBlocked
+                  ? 'Voice replies aren’t available here. Tap a button.'
+                  : !asked
+                    ? 'Asking…'
+                    : heard
+                      ? `Heard: “${heard}”`
+                      : 'Listening… say “send” or “I’m OK”.'}
+              </p>
+            )}
           </>
         )}
       </div>

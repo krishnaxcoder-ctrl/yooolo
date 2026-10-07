@@ -1174,3 +1174,10 @@ input[type='range'] {
     display: none;
   }
 }
+
+.sos-listen {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  font-style: italic;
+}

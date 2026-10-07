@@ -94,15 +94,31 @@ export function parseTrip(text: string): TripRequest | null {
   return { from: null, to: titleCase(t) }
 }
 
+/** What a spoken reply to the SOS alert asks for. "Don't send" is checked before "send", so it can't be misread. */
+export function sosReply(text: string): 'send' | 'cancel' | null {
+  const t = text.toLowerCase().replace(/[’]/g, "'")
+  if (/\b(don'?t|do not|no need|not)\b.*\b(send|call|help)\b/.test(t)) return 'cancel'
+  if (/\b(send|help|call|sos|s o s|emergency|ambulance)\b/.test(t)) return 'send'
+  if (/\b(i'?m|i am)\s+(ok|okay|fine|alright|all right|good|safe)\b|\b(cancel|stop|no)\b/.test(t)) return 'cancel'
+  return null
+}
+
 const titleCase = (s: string) => s.replace(/\b\p{L}/gu, (c) => c.toUpperCase())
 
-/** Speaks `text`, cutting off anything still being said so directions stay current. */
-export function say(text: string) {
-  if (!('speechSynthesis' in window)) return
+/**
+ * Speaks `text`, cutting off anything still being said so directions stay current.
+ * `onEnd` runs once it has been said (or straight away if the browser can't speak).
+ */
+export function say(text: string, onEnd?: () => void) {
+  if (!('speechSynthesis' in window)) return onEnd?.()
   speechSynthesis.cancel()
   const u = new SpeechSynthesisUtterance(text)
   u.lang = 'en-IN'
   u.voice = speechSynthesis.getVoices().find((v) => v.lang === 'en-IN') ?? null
+  if (onEnd) {
+    u.onend = () => onEnd()
+    u.onerror = () => onEnd()
+  }
   speechSynthesis.speak(u)
 }
 
