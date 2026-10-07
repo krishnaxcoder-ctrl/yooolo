@@ -3,6 +3,7 @@ import { HomeGuide } from './home/HomeGuide'
 import { Navigation } from './navigation/Navigation'
 import { askForMotionOnFirstTap, watchFalls } from './safety/fall'
 import { FallAlert } from './safety/FallAlert'
+import { FamilySettings } from './safety/FamilySettings'
 import { VoiceButton } from './navigation/VoiceButton'
 import type { TripRequest } from './navigation/voice'
 import { Viewport, type Frame, type Source } from './Viewport'
@@ -539,7 +540,7 @@ export default function App() {
                   onChange={(e) => setHazardsOn(e.target.checked)}
                 />
                 <span className="swatch" style={{ background: HAZARD_COLOR }} />
-                Detect potholes and ladders
+                Detect ladders
               </label>
               <p className="hint">
                 {wallModel
@@ -548,7 +549,8 @@ export default function App() {
               </p>
             </div>
 
-            <fieldset className="field">
+            {/* Laptops only: phones keep the automatic choice. */}
+            <fieldset className="field settings-engine">
               <legend className="field-label">Runs on</legend>
               <div className="segmented">
                 {ENGINES.map((e) => (
@@ -585,7 +587,10 @@ export default function App() {
               />
             </div>
 
-            <div className="field">
+            <FamilySettings />
+
+            {/* Laptops only: phones test the alert with a real fall. */}
+            <div className="field settings-safety">
               <h2 className="field-label">Safety</h2>
               <div className="actions">
                 <button

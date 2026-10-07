@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useVoiceReply } from '../navigation/useVoiceReply'
 import { canListen, say, sosReply } from '../navigation/voice'
+import { loadContacts } from './contacts'
 
 /** Long enough to hear the question and answer it out loud. */
 const COUNTDOWN_S = 15
 /** Start listening by now even if the browser never reports the question finished. */
 const PROMPT_MAX_MS = 8000
 
-/** Who the SOS goes to. A demo: nothing is actually sent. */
-const CONTACTS = [
-  { name: 'Parents', detail: 'Mom and Dad' },
-  { name: 'Ambulance', detail: '108' },
-]
+/** Who the SOS goes to, with the numbers from Parental settings. A demo: nothing is actually sent. */
+function recipients() {
+  const { mom, dad } = loadContacts()
+  return [
+    { name: 'Mom', detail: mom || 'No number set' },
+    { name: 'Dad', detail: dad || 'No number set' },
+    { name: 'Ambulance', detail: '108' },
+  ]
+}
 
 type Phase = { kind: 'countdown'; left: number } | { kind: 'sending' } | { kind: 'sent'; message: string }
 
@@ -99,7 +104,7 @@ export function FallAlert({ onClose }: { onClose: () => void }) {
             </h2>
             <div id="sos-body">
               <ul className="sos-contacts">
-                {CONTACTS.map((c) => (
+                {recipients().map((c) => (
                   <li key={c.name}>
                     <span>{c.name}</span>
                     <span className="sos-muted">{c.detail}</span>
