@@ -10,7 +10,7 @@ Camera frames and images never leave the device.
 YOLO27 isn't published yet (Ultralytics' page is a waitlist). It keeps the same interface as YOLO26, so when the
 weights are released, export them with the script below and they appear in the app with no code changes.
 
-## Run it
+## Run it 
 
 ```sh
 npm install
