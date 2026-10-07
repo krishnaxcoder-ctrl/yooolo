@@ -1114,3 +1114,63 @@ input[type='range'] {
   text-align: left;
   overflow-wrap: anywhere;
 }
+
+/* Shake demo: phones have the real sensor, so the button is for laptops. */
+
+.shake-fab {
+  position: fixed;
+  right: var(--gutter);
+  bottom: calc(var(--gutter) + 72px);
+  z-index: 19;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 50%;
+  background: #d93025;
+  color: #fff;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.shake-fab:hover {
+  transform: scale(1.05);
+}
+
+.shake-fab:disabled {
+  cursor: default;
+}
+
+/* The "Where to?" card opens above the mic, so the shake button steps aside while it's up. */
+.app:has(.voice-card) .shake-fab {
+  display: none;
+}
+
+.app[data-shaking] {
+  animation: page-shake 0.12s linear infinite;
+}
+
+@keyframes page-shake {
+  25% {
+    translate: -8px 2px;
+    rotate: -0.6deg;
+  }
+  75% {
+    translate: 8px -2px;
+    rotate: 0.6deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app[data-shaking] {
+    animation: none;
+  }
+}
+
+@media (max-width: 880px) {
+  .shake-fab {
+    display: none;
+  }
+}

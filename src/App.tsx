@@ -22,6 +22,8 @@ const SAMPLES: { label: string; source: Source }[] = [
 ]
 /** ADE20K classes that mean a change in floor level. */
 const STAIR_NAMES = ['stairs', 'stairway', 'step', 'escalator']
+/** How long the simulated shake plays before the fall alert opens. */
+const SHAKE_DEMO_MS = 700
 const NONE: readonly number[] = []
 const NO_NAMES: string[] = []
 const ADD_MODEL_HINT = 'Run "uv run scripts/export_model.py yolo26n" to add one.'
@@ -116,6 +118,16 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [trip, setTrip] = useState<TripRequest | null>(null)
   const [fallen, setFallen] = useState(false)
+  const [shaking, setShaking] = useState(false)
+
+  /** Laptops have no motion sensor, so this acts out a shake and then raises the alert. */
+  function simulateShake() {
+    setShaking(true)
+    setTimeout(() => {
+      setShaking(false)
+      setFallen(true)
+    }, SHAKE_DEMO_MS)
+  }
   const closeFallAlert = useCallback(() => setFallen(false), [])
 
   // A fall (or hard shaking) opens the SOS alert; while it's open, further jolts are ignored.
@@ -337,7 +349,7 @@ export default function App() {
   )
 
   return (
-    <div className="app">
+    <div className="app" data-shaking={shaking || undefined}>
       <header className="masthead">
         <h1 className="wordmark">yooolo</h1>
         <p className="tagline">Objects and walls, found by Ultralytics YOLO running entirely in your browser.</p>
@@ -530,6 +542,22 @@ export default function App() {
         />
       ) : (
         <VoiceButton onTrip={startTrip} />
+      )}
+
+      {!trip && (
+        <button
+          type="button"
+          className="shake-fab"
+          aria-label="Simulate a fall"
+          title="Simulate a fall"
+          disabled={shaking || fallen}
+          onClick={simulateShake}
+        >
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+            <rect x="8" y="3" width="8" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M4 8l-2 4 2 4M20 8l2 4-2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       )}
 
       {fallen && <FallAlert onClose={closeFallAlert} />}
