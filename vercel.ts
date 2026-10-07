@@ -8,7 +8,7 @@ export const config: VercelConfig = {
     // Cross-origin isolation lets ONNX Runtime run multi-threaded WebAssembly.
     routes.header('/(.*)', [
       { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-      { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+      { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
     ]),
     // Vite fingerprints everything under /assets, including the ONNX Runtime .wasm files.
     routes.cacheControl('/assets/(.*)', { public: true, maxAge: '1 year', immutable: true }),

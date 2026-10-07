@@ -2,10 +2,11 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // Cross-origin isolation lets ONNX Runtime run multi-threaded WebAssembly.
+// credentialless rather than require-corp, so Google Maps scripts and tiles (which send no CORP header) still load.
 // vercel.ts sets the same headers in production.
 const isolation = {
   'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
 }
 
 // https://vite.dev/config/

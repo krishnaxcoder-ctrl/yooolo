@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
+import { Navigation } from './navigation/Navigation'
+import { VoiceButton } from './navigation/VoiceButton'
+import type { TripRequest } from './navigation/voice'
 import { Viewport, type Frame, type Source } from './Viewport'
 import { classColor, coverage, SURFACE_COLOR } from './yolo/draw'
 import { YoloModel } from './yolo/model'
@@ -103,6 +106,9 @@ export default function App() {
   const [frame, setFrame] = useState<Frame | null>(null)
   const [fps, setFps] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [trip, setTrip] = useState<TripRequest | null>(null)
+  // Set when the camera was turned on for a trip, so closing the trip turns it off again.
+  const cameraForTrip = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const lastFrameAt = useRef<number | null>(null)
 
@@ -169,6 +175,24 @@ export default function App() {
     }
   }
 
+  function startTrip(next: TripRequest) {
+    setTrip(next)
+    if (source?.kind === 'camera') return
+    cameraForTrip.current = true
+    startCamera()
+  }
+
+  // Stable, because Navigation listens for Escape with it.
+  const closeTrip = useCallback(() => {
+    setTrip(null)
+    if (!cameraForTrip.current) return
+    cameraForTrip.current = false
+    setSource(null)
+    setFrame(null)
+    setFps(null)
+    lastFrameAt.current = null
+  }, [])
+
   const openImage = (file: File) => showSource({ kind: 'image', url: URL.createObjectURL(file), name: file.name })
 
   function onFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -204,6 +228,63 @@ export default function App() {
     frame?.surfaces && `walls ${formatMs(frame.surfaces.timings.inference)} ms`,
   ].filter(Boolean)
 
+  const viewport = (
+    <Viewport
+      objects={status.kind === 'ready' ? runners!.objects : null}
+      surfaces={showWalls && wallStatus.kind === 'ready' ? runners!.surfaces : null}
+      source={source}
+      conf={conf}
+      names={names}
+      surfaceClasses={wallClasses}
+      onFrame={onFrame}
+      onError={setNotice}
+      onDropImage={openImage}
+    >
+      {/* During a trip the empty state only needs a way to retry the camera. */}
+      {!source && trip && (
+        <div className="empty">
+          <p className="empty-title">{notice ?? 'Starting the camera…'}</p>
+          <div className="actions">
+            <button type="button" className="button primary" onClick={startCamera}>
+              Start camera
+            </button>
+          </div>
+        </div>
+      )}
+      {!source && !trip && (
+        <div className="empty">
+          <p className="empty-title">Point a camera at a room, or open a photo.</p>
+          <p className="empty-hint">You can also drop an image anywhere in this frame.</p>
+          <div className="actions">
+            <button type="button" className="button primary" onClick={startCamera}>
+              Start camera
+            </button>
+            {SAMPLES.map((s) => (
+              <button key={s.label} type="button" className="button on-dark" onClick={() => showSource(s.source)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {loading && (
+        <div className="status" role="status">
+          <span>
+            {loading.fraction < 1
+              ? `Downloading ${loading.label}, ${Math.round(loading.fraction * 100)}%`
+              : `Preparing ${loading.label}…`}
+          </span>
+          <span className="progress" style={{ '--fraction': loading.fraction } as CSSProperties} />
+        </div>
+      )}
+      {errors.length > 0 && (
+        <div className="status error" role="alert">
+          {errors.join(' ')}
+        </div>
+      )}
+    </Viewport>
+  )
+
   return (
     <div className="app">
       <header className="masthead">
@@ -213,49 +294,7 @@ export default function App() {
 
       <main className="workspace">
         <section className="stage" aria-label="Detection view">
-          <Viewport
-            objects={status.kind === 'ready' ? runners!.objects : null}
-            surfaces={showWalls && wallStatus.kind === 'ready' ? runners!.surfaces : null}
-            source={source}
-            conf={conf}
-            names={names}
-            surfaceClasses={wallClasses}
-            onFrame={onFrame}
-            onError={setNotice}
-            onDropImage={openImage}
-          >
-            {!source && (
-              <div className="empty">
-                <p className="empty-title">Point a camera at a room, or open a photo.</p>
-                <p className="empty-hint">You can also drop an image anywhere in this frame.</p>
-                <div className="actions">
-                  <button type="button" className="button primary" onClick={startCamera}>
-                    Start camera
-                  </button>
-                  {SAMPLES.map((s) => (
-                    <button key={s.label} type="button" className="button on-dark" onClick={() => showSource(s.source)}>
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {loading && (
-              <div className="status" role="status">
-                <span>
-                  {loading.fraction < 1
-                    ? `Downloading ${loading.label}, ${Math.round(loading.fraction * 100)}%`
-                    : `Preparing ${loading.label}…`}
-                </span>
-                <span className="progress" style={{ '--fraction': loading.fraction } as CSSProperties} />
-              </div>
-            )}
-            {errors.length > 0 && (
-              <div className="status error" role="alert">
-                {errors.join(' ')}
-              </div>
-            )}
-          </Viewport>
+          {!trip && viewport}
 
           <dl className="readout">
             <div className="metric">
@@ -395,6 +434,12 @@ export default function App() {
           <p className="privacy">Everything runs on this device. Video and images are never uploaded.</p>
         </aside>
       </main>
+
+      {trip ? (
+        <Navigation trip={trip} onClose={closeTrip} camera={viewport} detections={frame?.objects ?? null} names={names} />
+      ) : (
+        <VoiceButton onTrip={startTrip} />
+      )}
     </div>
   )
 }
