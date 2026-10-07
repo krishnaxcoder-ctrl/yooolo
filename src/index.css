@@ -973,3 +973,144 @@ input[type='range'] {
     animation: none;
   }
 }
+
+/* SOS alert */
+
+.sos-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(8 10 13 / 70%);
+}
+
+.sos {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 22px 22px;
+  border-radius: 14px;
+  background: var(--field);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 40%);
+}
+
+.sos-badge {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 0;
+  border-radius: 50%;
+  background: #d93025;
+  color: #fff;
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: sos-pulse 1s ease-out infinite;
+}
+
+.sos-badge[data-sent] {
+  background: #1e8e3e;
+  animation: none;
+}
+
+@keyframes sos-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(217 48 37 / 55%);
+  }
+  100% {
+    box-shadow: 0 0 0 24px rgb(217 48 37 / 0%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sos-badge {
+    animation: none;
+  }
+}
+
+.sos-title {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  font-stretch: 112%;
+  line-height: 1.2;
+}
+
+.sos-muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.sos-actions {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sos .button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+}
+
+.button.sos-primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.button.sos-danger {
+  border-color: #d93025;
+  color: #d93025;
+}
+
+.button.sos-danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sos-contacts {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.sos-contacts li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+
+.sos-status {
+  color: #1e8e3e;
+  font-size: 14px;
+}
+
+.sos-message {
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 14px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}

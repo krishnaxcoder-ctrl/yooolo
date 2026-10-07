@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react'
 import { Navigation } from './navigation/Navigation'
+import { askForMotionOnFirstTap, watchFalls } from './safety/fall'
+import { FallAlert } from './safety/FallAlert'
 import { VoiceButton } from './navigation/VoiceButton'
 import type { TripRequest } from './navigation/voice'
 import { Viewport, type Frame, type Source } from './Viewport'
@@ -113,6 +115,18 @@ export default function App() {
   const [fps, setFps] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [trip, setTrip] = useState<TripRequest | null>(null)
+  const [fallen, setFallen] = useState(false)
+  const closeFallAlert = useCallback(() => setFallen(false), [])
+
+  // A fall (or hard shaking) opens the SOS alert; while it's open, further jolts are ignored.
+  useEffect(() => {
+    const stopAsking = askForMotionOnFirstTap()
+    const stopWatching = watchFalls(() => setFallen(true))
+    return () => {
+      stopAsking()
+      stopWatching()
+    }
+  }, [])
   // Set when the camera was turned on for a trip, so closing the trip turns it off again.
   const cameraForTrip = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -488,6 +502,16 @@ export default function App() {
             />
           </div>
 
+          <div className="field">
+            <h2 className="field-label">Safety</h2>
+            <div className="actions">
+              <button type="button" className="button" onClick={() => setFallen(true)}>
+                Test fall alert
+              </button>
+            </div>
+            <p className="hint">On a phone, a fall or hard shaking opens an SOS alert for your parents and an ambulance.</p>
+          </div>
+
           <p className="privacy">Everything runs on this device. Video and images are never uploaded.</p>
         </aside>
       </main>
@@ -507,6 +531,8 @@ export default function App() {
       ) : (
         <VoiceButton onTrip={startTrip} />
       )}
+
+      {fallen && <FallAlert onClose={closeFallAlert} />}
     </div>
   )
 }
