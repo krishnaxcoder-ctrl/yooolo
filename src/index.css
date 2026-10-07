@@ -25,8 +25,16 @@
   -webkit-font-smoothing: antialiased;
 }
 
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #0a0a0a;
     --field: #161616;
     --ink: #ededed;
@@ -37,6 +45,19 @@
     --viewport: #000000;
     --danger: #ff8a80;
   }
+}
+
+/* Chosen in the header, whatever the system says. */
+:root[data-theme='dark'] {
+  --paper: #0a0a0a;
+  --field: #161616;
+  --ink: #ededed;
+  --muted: #a3a3a3;
+  --line: #262626;
+  --line-strong: #404040;
+  --hover: rgb(237 237 237 / 7%);
+  --viewport: #000000;
+  --danger: #ff8a80;
 }
 
 *,
@@ -1668,4 +1689,52 @@ input[type='range'] {
   padding: 0;
   font-size: 22px;
   line-height: 1;
+}
+
+/* Header tools: theme switch and parental settings, top right on laptops */
+
+.header-tools {
+  position: absolute;
+  top: 18px;
+  right: var(--gutter);
+  display: flex;
+  gap: 8px;
+}
+
+.header-tools .settings-button {
+  position: static;
+}
+
+.theme-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-button:hover {
+  background: var(--hover);
+}
+
+.masthead {
+  padding-right: calc(var(--gutter) + 300px);
+}
+
+/* Phones: the theme follows the system; the gear floats over the camera. */
+@media (max-width: 880px) {
+  .theme-button {
+    display: none;
+  }
+
+  .header-tools .settings-button {
+    position: fixed;
+  }
 }

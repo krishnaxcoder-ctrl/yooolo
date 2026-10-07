@@ -4,6 +4,7 @@ import { Navigation } from './navigation/Navigation'
 import { askForMotionOnFirstTap, watchFalls } from './safety/fall'
 import { FallAlert } from './safety/FallAlert'
 import { FamilySettings } from './safety/FamilySettings'
+import { applyTheme, currentTheme, type Theme } from './theme'
 import { VoiceButton } from './navigation/VoiceButton'
 import type { TripRequest } from './navigation/voice'
 import { Viewport, type Frame, type Source } from './Viewport'
@@ -12,16 +13,6 @@ import { YoloModel } from './yolo/model'
 import type { Engine, EnginePreference, ModelInfo } from './yolo/types'
 
 const MODELS_URL = `${import.meta.env.BASE_URL}models/`
-const SAMPLES: { label: string; source: Source }[] = [
-  {
-    label: 'Try a room photo',
-    source: { kind: 'image', url: `${import.meta.env.BASE_URL}samples/room.jpg`, name: 'A living room with sofas and large windows' },
-  },
-  {
-    label: 'Try a street photo',
-    source: { kind: 'image', url: `${import.meta.env.BASE_URL}samples/bus.jpg`, name: 'A street with a bus and four people' },
-  },
-]
 /** ADE20K classes that mean a change in floor level. */
 const STAIR_NAMES = ['stairs', 'stairway', 'step', 'escalator']
 /** How long the simulated shake plays before the fall alert opens. */
@@ -121,6 +112,13 @@ export default function App() {
   const [trip, setTrip] = useState<TripRequest | null>(null)
   const [fallen, setFallen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [theme, setTheme] = useState<Theme>(currentTheme)
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+  }
 
   useEffect(() => {
     if (!settingsOpen) return
@@ -378,11 +376,6 @@ export default function App() {
               </svg>
               Upload a photo
             </button>
-            {SAMPLES.map((s) => (
-              <button key={s.label} type="button" className="button on-dark" onClick={() => showSource(s.source)}>
-                {s.label}
-              </button>
-            ))}
           </div>
         </div>
       )}
@@ -498,26 +491,53 @@ export default function App() {
         </aside>
       </main>
 
-      <button
-        type="button"
-        className="settings-button"
-        aria-label="Parental settings"
-        aria-expanded={settingsOpen}
-        onClick={() => setSettingsOpen(true)}
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path
-            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <span className="settings-button-label">Parental settings</span>
-      </button>
+      <div className="header-tools">
+        <button
+          type="button"
+          className="theme-button"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          onClick={toggleTheme}
+        >
+          {theme === 'dark' ? (
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path
+                d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+            </svg>
+          )}
+          <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+        </button>
+        <button
+          type="button"
+          className="settings-button"
+          aria-label="Parental settings"
+          aria-expanded={settingsOpen}
+          onClick={() => setSettingsOpen(true)}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="settings-button-label">Parental settings</span>
+        </button>
+      </div>
 
       {settingsOpen && (
         <div className="settings-backdrop" onClick={(e) => e.target === e.currentTarget && setSettingsOpen(false)}>
@@ -624,7 +644,7 @@ export default function App() {
                   Test fall alert
                 </button>
               </div>
-              <p className="hint">On a phone, a fall (a drop, a hard landing, then stillness) opens an SOS alert for your parents and an ambulance. Shaking doesn't.</p>
+              <p className="hint">On a phone, a fall or about two seconds of hard shaking opens an SOS alert for your parents and an ambulance. A quick shake doesn't.</p>
             </div>
             <button type="button" className="button settings-done" onClick={() => setSettingsOpen(false)}>
               Done
