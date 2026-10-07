@@ -2,16 +2,16 @@
 
 :root {
   color-scheme: light dark;
-  --paper: #e9ecef;
-  --field: #f6f7f8;
-  --ink: #18212b;
-  --muted: #5b6673;
-  --line: #cdd3d9;
-  --line-strong: #aeb6bf;
-  --hover: rgb(24 33 43 / 6%);
-  --viewport: #222a34;
-  --viewport-ink: #e7ebef;
-  --viewport-muted: #9aa5b1;
+  --paper: #ededed;
+  --field: #f7f7f7;
+  --ink: #111111;
+  --muted: #5e5e5e;
+  --line: #d4d4d4;
+  --line-strong: #b0b0b0;
+  --hover: rgb(17 17 17 / 6%);
+  --viewport: #0a0a0a;
+  --viewport-ink: #ededed;
+  --viewport-muted: #a3a3a3;
   --signal: #f2c230;
   --danger: #b3261e;
   --radius: 6px;
@@ -27,14 +27,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #161b21;
-    --field: #1e252d;
-    --ink: #e4e8ec;
-    --muted: #9aa4af;
-    --line: #2c343e;
-    --line-strong: #46505c;
-    --hover: rgb(228 232 236 / 7%);
-    --viewport: #0d1115;
+    --paper: #0a0a0a;
+    --field: #161616;
+    --ink: #ededed;
+    --muted: #a3a3a3;
+    --line: #262626;
+    --line-strong: #404040;
+    --hover: rgb(237 237 237 / 7%);
+    --viewport: #000000;
     --danger: #ff8a80;
   }
 }
@@ -214,7 +214,7 @@ body {
   gap: 8px;
   padding: 10px 14px;
   border-radius: var(--radius);
-  background: rgb(13 17 21 / 88%);
+  background: rgb(0 0 0 / 88%);
   font-size: 14px;
 }
 
@@ -375,7 +375,7 @@ body {
 .viewport .button.primary {
   border-color: var(--signal);
   background: var(--signal);
-  color: #10161d;
+  color: #0a0a0a;
 }
 
 .button.on-dark {
@@ -551,7 +551,7 @@ input[type='range'] {
   border: 0;
   border-radius: 50%;
   background: var(--signal);
-  color: #10161d;
+  color: #0a0a0a;
   box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
   cursor: pointer;
   transition: transform 0.15s;
@@ -581,7 +581,7 @@ input[type='range'] {
 
 .voice-fab[data-listening] {
   background: var(--signal);
-  color: #10161d;
+  color: #0a0a0a;
   animation: voice-pulse 1.4s ease-out infinite;
 }
 
@@ -734,7 +734,7 @@ input[type='range'] {
 
 .nav-hazard[data-near] {
   background: var(--signal);
-  color: #10161d;
+  color: #0a0a0a;
 }
 
 .nav[data-main='map'] .nav-hazard {
@@ -862,7 +862,7 @@ input[type='range'] {
 .button.nav-go {
   border-color: var(--signal);
   background: var(--signal);
-  color: #10161d;
+  color: #0a0a0a;
 }
 
 .voice-label {
@@ -1028,7 +1028,7 @@ input[type='range'] {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(8 10 13 / 70%);
+  background: rgb(0 0 0 / 70%);
 }
 
 .sos {
@@ -1263,4 +1263,314 @@ input[type='range'] {
 .home-sheet {
   max-height: 55dvh;
   overflow-y: auto;
+}
+
+/* Parental settings: a gear in the header on laptops, over the camera on phones */
+
+.app {
+  position: relative;
+}
+
+.settings-button {
+  position: absolute;
+  top: 18px;
+  right: var(--gutter);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-button:hover {
+  background: var(--hover);
+}
+
+/* Keep the tagline clear of the button. */
+.masthead {
+  padding-right: calc(var(--gutter) + 200px);
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(0 0 0 / 55%);
+}
+
+.settings-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 20px var(--gutter) 32px;
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: -12px 0 40px rgb(0 0 0 / 30%);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  font-stretch: 112%;
+}
+
+@media (max-width: 880px) {
+  .settings-button {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 21;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 72%);
+    color: #fff;
+  }
+
+  .settings-button:hover {
+    background: rgb(0 0 0 / 85%);
+  }
+
+  .settings-button-label {
+    display: none;
+  }
+}
+
+/* Settings as cards, with switches instead of checkboxes */
+
+.settings-drawer {
+  gap: 14px;
+  padding-top: 0;
+}
+
+.settings-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 18px var(--gutter) 10px;
+  background: var(--paper);
+}
+
+.settings-drawer .field {
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--field);
+}
+
+/* A fieldset's legend sits on its top edge; floating it puts it inside the card like the other headings. */
+.settings-drawer legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.settings-drawer legend + * {
+  clear: both;
+}
+
+.settings-drawer .toggle {
+  min-height: 44px;
+  justify-content: flex-start;
+}
+
+.settings-drawer .toggle input {
+  order: 2;
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-drawer .toggle input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  transition: translate 0.15s;
+}
+
+.settings-drawer .toggle input:checked {
+  background: #1e8e3e;
+}
+
+.settings-drawer .toggle input:checked::after {
+  translate: 18px 0;
+}
+
+.settings-drawer .toggle input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.settings-drawer .hint {
+  min-height: 0;
+}
+
+.settings-drawer .actions .button {
+  flex: 1;
+}
+
+.button.settings-done {
+  flex: none;
+  margin-top: 4px;
+  padding: 14px;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 17px;
+}
+
+/* Phones: a sheet that slides up from the bottom, full width. */
+@media (max-width: 880px) {
+  .settings-drawer {
+    top: auto;
+    left: 0;
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -12px 40px rgb(0 0 0 / 35%);
+    animation: sheet-up 0.22s ease-out;
+  }
+
+  .settings-head {
+    border-radius: 18px 18px 0 0;
+    padding-top: 22px;
+  }
+
+  /* A grab handle, the usual sign of a bottom sheet. */
+  .settings-head::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    translate: -50% 0;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    translate: 0 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-drawer {
+    animation: none;
+  }
+}
+
+/* Upload: a full-width outlined button under Start camera on phones, inline on laptops. */
+.upload-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.button.on-dark.upload-photo {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+@media (max-width: 880px) {
+  .empty .upload-photo {
+    grid-column: 1 / -1;
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+/* Settings in the app's black and yellow */
+
+.settings-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 0.9em;
+  margin-right: 10px;
+  border-radius: 2px;
+  background: var(--signal);
+  vertical-align: -0.08em;
+}
+
+.settings-drawer .toggle input:checked {
+  background: var(--signal);
+}
+
+.settings-drawer .toggle input:checked::after {
+  background: #0a0a0a;
+  box-shadow: none;
+}
+
+.settings-drawer .segmented input:checked + span {
+  background: var(--signal);
+  color: #0a0a0a;
+}
+
+.settings-drawer .segmented input:focus-visible + span {
+  outline-color: var(--signal);
+}
+
+.settings-drawer input[type='range'] {
+  accent-color: var(--signal);
+}
+
+.settings-drawer .field-row output {
+  color: var(--signal);
+}
+
+.settings-drawer .actions .button {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
+.settings-drawer .actions .button:hover {
+  background: rgb(242 194 48 / 10%);
+}
+
+.button.settings-done {
+  border-color: var(--signal);
+  background: var(--signal);
+  color: #0a0a0a;
 }

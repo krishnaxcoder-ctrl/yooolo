@@ -83,7 +83,7 @@ function drawTag(
   const tagY = y - tagHeight >= 0 ? y - tagHeight : y
   ctx.fillStyle = color
   ctx.fillRect(tagX, tagY, tagWidth, tagHeight)
-  ctx.fillStyle = '#10161d'
+  ctx.fillStyle = '#0a0a0a'
   ctx.fillText(label, tagX + pad, tagY + pad)
 }
 

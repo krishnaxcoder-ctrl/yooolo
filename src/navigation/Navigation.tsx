@@ -124,7 +124,7 @@ export function Navigation({
       route.path.forEach((p) => bounds.extend(p))
       m.fitBounds(bounds, 48)
       // A dark casing under a yellow line reads on both the road map and satellite-like tiles.
-      new Polyline({ map: m, path: route.path, strokeColor: '#18212b', strokeWeight: 9, strokeOpacity: 0.9 })
+      new Polyline({ map: m, path: route.path, strokeColor: '#111111', strokeWeight: 9, strokeOpacity: 0.9 })
       new Polyline({ map: m, path: route.path, strokeColor: '#f2c230', strokeWeight: 5, strokeOpacity: 1 })
       new Marker({ map: m, position: route.start, label: { text: 'A', fontWeight: '700' }, title: trip.from ?? 'Your location' })
       new Marker({ map: m, position: route.end, label: { text: 'B', fontWeight: '700' }, title: trip.to })

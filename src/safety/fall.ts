@@ -1,39 +1,67 @@
-/** Below this total acceleration (m/s², gravity included) the phone is in free fall. */
-const FREE_FALL = 3
-/** Above this it has hit something, or is being shaken hard (about 2.5 g). */
-const IMPACT = 25
-/** An impact this soon after free fall is a drop: the phone, and likely its owner, fell. */
-const FALL_WINDOW_MS = 1000
-/** This many hard jolts in a short time also count, so shaking the phone calls for help. */
-const SHAKES = 4
-const SHAKE_WINDOW_MS = 1500
+/**
+ * A fall, as the motion sensor sees it: the phone drops (free fall), hits the ground (impact), then
+ * lies still. Each stage rules out everyday handling: shaking only touches free fall for an instant
+ * and never lies still, and putting the phone down has no free fall.
+ */
 
-/** Calls `onFall` when the motion sensor sees a fall, or hard shaking. Returns a function that stops watching. */
+const GRAVITY = 9.81
+/** Below this total acceleration (m/s², gravity included) the phone is falling. */
+const FREE_FALL = 3
+/** Free fall must last this long: about a 10 cm drop. Shaking dips below for a few milliseconds at most. */
+const FREE_FALL_MS = 150
+/** The landing: about 3 g. */
+const IMPACT = 30
+/** The impact must come this soon after the fall ends. */
+const IMPACT_WINDOW_MS = 1000
+/** After landing, wait this long, then require the phone to have stayed this close to plain gravity. */
+const SETTLE_MS = 300
+const STILL_MS = 1200
+const STILL_WOBBLE = 2
+
+type Stage =
+  | { kind: 'idle' }
+  | { kind: 'falling'; since: number }
+  | { kind: 'fell'; at: number }
+  | { kind: 'landed'; at: number; wobble: number; samples: number }
+
+/** Calls `onFall` when the motion sensor sees a fall. Returns a function that stops watching. */
 export function watchFalls(onFall: () => void): () => void {
-  let freeFallAt = -Infinity
-  let jolts: number[] = []
-  let above = false
+  let stage: Stage = { kind: 'idle' }
 
   const onMotion = (e: DeviceMotionEvent) => {
     const a = e.accelerationIncludingGravity
     if (a?.x == null || a.y == null || a.z == null) return
     const g = Math.hypot(a.x, a.y, a.z)
     const now = e.timeStamp || performance.now()
-    if (g < FREE_FALL) freeFallAt = now
 
-    // Count each jolt once, on the way up, however many sensor readings it spans.
-    const rising = g > IMPACT && !above
-    above = g > IMPACT
-    if (!rising) return
-    if (now - freeFallAt < FALL_WINDOW_MS) {
-      freeFallAt = -Infinity
-      jolts = []
-      return onFall()
-    }
-    jolts = [...jolts.filter((t) => now - t < SHAKE_WINDOW_MS), now]
-    if (jolts.length >= SHAKES) {
-      jolts = []
-      onFall()
+    switch (stage.kind) {
+      case 'idle':
+        if (g < FREE_FALL) stage = { kind: 'falling', since: now }
+        break
+      case 'falling':
+        if (g < FREE_FALL) break
+        if (now - stage.since < FREE_FALL_MS) {
+          stage = { kind: 'idle' }
+          break
+        }
+        // The reading that ends the fall is usually the impact itself.
+        stage = g > IMPACT ? { kind: 'landed', at: now, wobble: 0, samples: 0 } : { kind: 'fell', at: now }
+        break
+      case 'fell':
+        if (g > IMPACT) stage = { kind: 'landed', at: now, wobble: 0, samples: 0 }
+        else if (now - stage.at > IMPACT_WINDOW_MS) stage = { kind: 'idle' }
+        break
+      case 'landed': {
+        const since = now - stage.at
+        if (since < SETTLE_MS) break // the bounce
+        stage.wobble += Math.abs(g - GRAVITY)
+        stage.samples++
+        if (since < SETTLE_MS + STILL_MS) break
+        const still = stage.wobble / stage.samples < STILL_WOBBLE
+        stage = { kind: 'idle' }
+        if (still) onFall()
+        break
+      }
     }
   }
 

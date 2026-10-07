@@ -119,6 +119,14 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [trip, setTrip] = useState<TripRequest | null>(null)
   const [fallen, setFallen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSettingsOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [settingsOpen])
   const [shaking, setShaking] = useState(false)
 
   /** Laptops have no motion sensor, so this acts out a shake and then raises the alert. */
@@ -131,7 +139,7 @@ export default function App() {
   }
   const closeFallAlert = useCallback(() => setFallen(false), [])
 
-  // A fall (or hard shaking) opens the SOS alert; while it's open, further jolts are ignored.
+  // A fall opens the SOS alert; while it's open, further jolts are ignored.
   useEffect(() => {
     const stopAsking = askForMotionOnFirstTap()
     const stopWatching = watchFalls(() => setFallen(true))
@@ -335,6 +343,20 @@ export default function App() {
               </svg>
               Start camera
             </button>
+            {/* Phones hide the settings panel, so its "Open image" needs a twin here. */}
+            <button type="button" className="button on-dark upload-photo" onClick={() => fileInput.current?.click()}>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Upload a photo
+            </button>
             {SAMPLES.map((s) => (
               <button key={s.label} type="button" className="button on-dark" onClick={() => showSource(s.source)}>
                 {s.label}
@@ -451,95 +473,140 @@ export default function App() {
             </select>
           </div>
 
-          <div className="field">
-            <h2 className="field-label">Hazards</h2>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={showWalls}
-                disabled={!wallModel}
-                onChange={(e) => setWallsOn(e.target.checked)}
-              />
-              <span className="swatch" style={{ background: SURFACE_COLOR }} />
-              Highlight walls
-            </label>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={showStairs}
-                disabled={!stairClasses.length}
-                onChange={(e) => setStairsOn(e.target.checked)}
-              />
-              <span className="swatch" style={{ background: HAZARD_COLOR }} />
-              Highlight stairs
-            </label>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={showHazards}
-                disabled={!hazardModel}
-                onChange={(e) => setHazardsOn(e.target.checked)}
-              />
-              <span className="swatch" style={{ background: HAZARD_COLOR }} />
-              Detect potholes and ladders
-            </label>
-            <p className="hint">
-              {wallModel
-                ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}${hazardModel ? `, and ${hazardModel.label}, ${formatMB(hazardModel.bytes)}` : ''}.`
-                : 'No wall model is installed. Run "uv run scripts/export_model.py yolo26n-sem-ade20k" to add one.'}
-            </p>
-          </div>
-
-          <fieldset className="field">
-            <legend className="field-label">Runs on</legend>
-            <div className="segmented">
-              {ENGINES.map((e) => (
-                <label key={e.value}>
-                  <input
-                    type="radio"
-                    name="engine"
-                    value={e.value}
-                    checked={engine === e.value}
-                    onChange={() => setEngine(e.value)}
-                  />
-                  <span>{e.label}</span>
-                </label>
-              ))}
-            </div>
-            <p className="hint">{engineSummary(status)}</p>
-          </fieldset>
-
-          <div className="field">
-            <div className="field-row">
-              <label className="field-label" htmlFor="conf">
-                Minimum object confidence
-              </label>
-              <output htmlFor="conf">{Math.round(conf * 100)}%</output>
-            </div>
-            <input
-              id="conf"
-              type="range"
-              min={0.05}
-              max={0.95}
-              step={0.05}
-              value={conf}
-              onChange={(e) => setConf(Number(e.target.value))}
-            />
-          </div>
-
-          <div className="field">
-            <h2 className="field-label">Safety</h2>
-            <div className="actions">
-              <button type="button" className="button" onClick={() => setFallen(true)}>
-                Test fall alert
-              </button>
-            </div>
-            <p className="hint">On a phone, a fall or hard shaking opens an SOS alert for your parents and an ambulance.</p>
-          </div>
-
           <p className="privacy">Everything runs on this device. Video and images are never uploaded.</p>
         </aside>
       </main>
+
+      <button
+        type="button"
+        className="settings-button"
+        aria-label="Parental settings"
+        aria-expanded={settingsOpen}
+        onClick={() => setSettingsOpen(true)}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="settings-button-label">Parental settings</span>
+      </button>
+
+      {settingsOpen && (
+        <div className="settings-backdrop" onClick={(e) => e.target === e.currentTarget && setSettingsOpen(false)}>
+          <aside className="settings-drawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div className="settings-head">
+              <h2 id="settings-title" className="settings-title">
+                Parental settings
+              </h2>
+              <button type="button" className="voice-close" aria-label="Close" onClick={() => setSettingsOpen(false)}>
+                ×
+              </button>
+            </div>
+            <div className="field">
+              <h2 className="field-label">Hazards</h2>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={showWalls}
+                  disabled={!wallModel}
+                  onChange={(e) => setWallsOn(e.target.checked)}
+                />
+                <span className="swatch" style={{ background: SURFACE_COLOR }} />
+                Highlight walls
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={showStairs}
+                  disabled={!stairClasses.length}
+                  onChange={(e) => setStairsOn(e.target.checked)}
+                />
+                <span className="swatch" style={{ background: HAZARD_COLOR }} />
+                Highlight stairs
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={showHazards}
+                  disabled={!hazardModel}
+                  onChange={(e) => setHazardsOn(e.target.checked)}
+                />
+                <span className="swatch" style={{ background: HAZARD_COLOR }} />
+                Detect potholes and ladders
+              </label>
+              <p className="hint">
+                {wallModel
+                  ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}${hazardModel ? `, and ${hazardModel.label}, ${formatMB(hazardModel.bytes)}` : ''}.`
+                  : 'No wall model is installed. Run "uv run scripts/export_model.py yolo26n-sem-ade20k" to add one.'}
+              </p>
+            </div>
+
+            <fieldset className="field">
+              <legend className="field-label">Runs on</legend>
+              <div className="segmented">
+                {ENGINES.map((e) => (
+                  <label key={e.value}>
+                    <input
+                      type="radio"
+                      name="engine"
+                      value={e.value}
+                      checked={engine === e.value}
+                      onChange={() => setEngine(e.value)}
+                    />
+                    <span>{e.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="hint">{engineSummary(status)}</p>
+            </fieldset>
+
+            <div className="field">
+              <div className="field-row">
+                <label className="field-label" htmlFor="conf">
+                  Minimum object confidence
+                </label>
+                <output htmlFor="conf">{Math.round(conf * 100)}%</output>
+              </div>
+              <input
+                id="conf"
+                type="range"
+                min={0.05}
+                max={0.95}
+                step={0.05}
+                value={conf}
+                onChange={(e) => setConf(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="field">
+              <h2 className="field-label">Safety</h2>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => {
+                    setSettingsOpen(false)
+                    setFallen(true)
+                  }}
+                >
+                  Test fall alert
+                </button>
+              </div>
+              <p className="hint">On a phone, a fall (a drop, a hard landing, then stillness) opens an SOS alert for your parents and an ambulance. Shaking doesn't.</p>
+            </div>
+            <button type="button" className="button settings-done" onClick={() => setSettingsOpen(false)}>
+              Done
+            </button>
+          </aside>
+        </div>
+      )}
 
       {trip ? (
         <Navigation
