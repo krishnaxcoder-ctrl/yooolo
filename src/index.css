@@ -909,6 +909,7 @@ input[type='range'] {
     height: 25dvh;
     display: grid;
     grid-template-columns: 1fr 1fr;
+    align-items: stretch;
     gap: 0;
   }
 
