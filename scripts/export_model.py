@@ -16,6 +16,10 @@ Usage:
     uv run scripts/export_model.py yolo26n-sem-ade20k --label "YOLO26n-sem (ADE20K)"
     uv run scripts/export_model.py yolo27n          # once YOLO27 weights are published
     uv run scripts/export_model.py runs/detect/train/weights/best.pt --id parts --label "Parts detector"
+    uv run scripts/export_model.py .weights/runs/pothole/weights/best.pt --id yolo26n-pothole --label "Potholes" --role hazard
+
+A detection model exported with --role hazard (e.g. potholes) runs alongside the chosen object
+model instead of being offered as one, and what it finds is announced during navigation.
 """
 
 from __future__ import annotations
@@ -53,7 +57,7 @@ def output_format(onnx_path: Path, num_classes: int) -> str:
     raise SystemExit(f"Unsupported output shape {dims} in {onnx_path.name}")
 
 
-def export(weights: str, model_id: str | None, label: str | None, imgsz: int) -> dict:
+def export(weights: str, model_id: str | None, label: str | None, imgsz: int, role: str | None) -> dict:
     model = YOLO(weights)
     if model.task not in SUPPORTED_TASKS:
         raise SystemExit(
@@ -68,7 +72,7 @@ def export(weights: str, model_id: str | None, label: str | None, imgsz: int) ->
     shutil.move(str(exported), target)
 
     names = [model.names[i] for i in sorted(model.names)]
-    return {
+    entry = {
         "id": stem,
         "label": label or pretty_label(stem),
         "file": target.name,
@@ -78,6 +82,9 @@ def export(weights: str, model_id: str | None, label: str | None, imgsz: int) ->
         "bytes": target.stat().st_size,
         "names": names,
     }
+    if role:
+        entry["role"] = role
+    return entry
 
 
 def main() -> None:
@@ -86,16 +93,17 @@ def main() -> None:
     parser.add_argument("--id", help="Model id and file name (single model only)")
     parser.add_argument("--label", help="Name shown in the app (single model only)")
     parser.add_argument("--imgsz", type=int, default=640)
+    parser.add_argument("--role", choices=["hazard"], help="hazard: run alongside the object model and announce detections")
     args = parser.parse_args()
-    if len(args.weights) > 1 and (args.id or args.label):
-        parser.error("--id and --label only apply when exporting a single model")
+    if len(args.weights) > 1 and (args.id or args.label or args.role):
+        parser.error("--id, --label and --role only apply when exporting a single model")
 
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {"models": []}
     weights_list = [str(Path(w).resolve()) if Path(w).exists() else (w if w.endswith(".pt") else w + ".pt") for w in args.weights]
     WEIGHTS_DIR.mkdir(exist_ok=True)
     os.chdir(WEIGHTS_DIR)
     for weights in weights_list:
-        entry = export(weights, args.id, args.label, args.imgsz)
+        entry = export(weights, args.id, args.label, args.imgsz, args.role)
         manifest["models"] = [m for m in manifest["models"] if m["id"] != entry["id"]] + [entry]
         print(f"Added {entry['label']} ({entry['format']}, {entry['bytes'] / 1e6:.1f} MB) -> public/models/{entry['file']}")
 

@@ -342,6 +342,20 @@
         "clock",
         "flag"
       ]
+    },
+    {
+      "id": "hazards",
+      "label": "Hazards",
+      "file": "hazards.onnx",
+      "imgsz": 640,
+      "task": "detect",
+      "format": "raw",
+      "bytes": 50079716,
+      "names": [
+        "pothole",
+        "ladder"
+      ],
+      "role": "hazard"
     }
   ]
 }

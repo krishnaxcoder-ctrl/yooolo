@@ -62,9 +62,22 @@ interface NavigationProps {
   /** The latest label map from the surface model, used to warn about stairs. */
   surfaces: SegmentResult | null
   stairClasses: readonly number[]
+  /** The latest boxes from the hazard detector (potholes, ladders) and its class names. */
+  hazardBoxes: DetectResult | null
+  hazardNames: string[]
 }
 
-export function Navigation({ trip, onClose, camera, detections, names, surfaces, stairClasses }: NavigationProps) {
+export function Navigation({
+  trip,
+  onClose,
+  camera,
+  detections,
+  names,
+  surfaces,
+  stairClasses,
+  hazardBoxes,
+  hazardNames,
+}: NavigationProps) {
   const [plan, setPlan] = useState<Plan>({ kind: trip.from ? 'routing' : 'locating' })
   const [mode, setMode] = useState<Mode>('overview')
   const [progress, setProgress] = useState<Progress>(START)
@@ -177,14 +190,14 @@ export function Navigation({ trip, onClose, camera, detections, names, surfaces,
   }, [route, mode, progress, muted, trip.to])
 
   // Warn about obstacles the camera sees, between directions rather than over them.
-  const hazards = allHazards(detections, names, surfaces, stairClasses)
+  const hazards = allHazards(detections, names, surfaces, stairClasses, hazardBoxes, hazardNames)
   useEffect(() => {
     if (mode === 'overview' || speaking()) return
-    const h = announcer.current.pick(allHazards(detections, names, surfaces, stairClasses))
+    const h = announcer.current.pick(allHazards(detections, names, surfaces, stairClasses, hazardBoxes, hazardNames))
     if (!h) return
     if (!muted) say(hazardPhrase(h))
     buzz(h)
-  }, [detections, names, surfaces, stairClasses, mode, muted])
+  }, [detections, names, surfaces, stairClasses, hazardBoxes, hazardNames, mode, muted])
 
   // The inset sits just above the bottom sheet, whose height changes with its content.
   useEffect(() => {

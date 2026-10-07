@@ -12,6 +12,8 @@ export interface ModelInfo {
   format: 'end2end' | 'raw' | 'labelmap'
   bytes: number
   names: string[]
+  /** hazard: a detector (e.g. potholes) that runs alongside the chosen object model. */
+  role?: 'hazard'
 }
 
 export type Engine = 'webgpu' | 'wasm'

@@ -16,7 +16,15 @@ const OBSTACLES = new Set([
   'dog', 'cat', 'horse', 'cow', 'sheep', 'elephant',
   'bench', 'chair', 'couch', 'dining table', 'bed', 'potted plant', 'fire hydrant',
   'parking meter', 'stop sign', 'suitcase', 'skateboard', 'toilet', 'refrigerator',
+  // From the hazard detector.
+  'ladder',
 ])
+
+/** Hazards on the ground. They're flat, so how low they sit in the frame says how close they are. */
+const GROUND = new Set(['pothole'])
+/** Box bottoms (share of frame height) at which a ground hazard is in the way, and close. */
+const GROUND_AHEAD = 0.55
+const GROUND_NEAR = 0.8
 
 /** Box heights (share of frame) at which something counts as in the way, and as close. */
 const AHEAD_SIZE = 0.28
@@ -28,11 +36,16 @@ export function findHazards(result: DetectResult, names: string[]): Hazard[] {
   const hazards: Hazard[] = []
   for (const d of result.detections) {
     const name = names[d.classId]
-    if (!name || !OBSTACLES.has(name)) continue
+    if (!name || !(OBSTACLES.has(name) || GROUND.has(name))) continue
     const [x1, y1, x2, y2] = d.box
     const cx = (x1 + x2) / 2 / result.width
-    const size = (y2 - y1) / result.height
     const side: Side = cx < 0.33 ? 'left' : cx > 0.67 ? 'right' : 'ahead'
+    if (GROUND.has(name)) {
+      const bottom = y2 / result.height
+      if (bottom >= GROUND_AHEAD) hazards.push({ name, side, size: bottom, near: bottom >= GROUND_NEAR })
+      continue
+    }
+    const size = (y2 - y1) / result.height
     if (size < (side === 'ahead' ? AHEAD_SIZE : SIDE_SIZE)) continue
     hazards.push({ name, side, size, near: size >= NEAR_SIZE })
   }
@@ -81,13 +94,22 @@ export function allHazards(
   names: string[],
   surfaces: SegmentResult | null,
   stairClasses: readonly number[],
+  detected: DetectResult | null = null,
+  detectedNames: string[] = [],
 ): Hazard[] {
   const stairs = surfaces ? findStairs(surfaces, stairClasses) : null
-  const hazards = objects ? findHazards(objects, names) : []
-  return (stairs ? [stairs, ...hazards] : hazards).sort(mostPressing)
+  return [
+    ...(stairs ? [stairs] : []),
+    ...(objects ? findHazards(objects, names) : []),
+    ...(detected ? findHazards(detected, detectedNames) : []),
+  ].sort(mostPressing)
 }
 
 export function hazardPhrase(h: Hazard): string {
+  if (GROUND.has(h.name)) {
+    const where = h.side === 'ahead' ? 'ahead' : `on your ${h.side}`
+    return h.near ? `Careful, ${h.name} ${where}.` : `${capitalize(h.name)} ${where}.`
+  }
   if (h.name === 'stairs' && h.near) return h.side === 'ahead' ? 'Careful, stairs ahead.' : `Careful, stairs on your ${h.side}.`
   if (h.side === 'ahead') return h.near ? `Slow down, ${h.name} ahead.` : `${capitalize(h.name)} ahead.`
   return `${capitalize(h.name)} on your ${h.side}.`

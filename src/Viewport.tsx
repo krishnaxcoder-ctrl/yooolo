@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { clearCanvas, drawOverlay } from './yolo/draw'
+import { clearCanvas, drawOverlay, dropBoxesOnStairs } from './yolo/draw'
 import type { YoloModel } from './yolo/model'
 import type { DetectResult, SegmentResult } from './yolo/types'
 
@@ -9,6 +9,8 @@ export type Source = { kind: 'camera'; stream: MediaStream } | { kind: 'image'; 
 export interface Frame {
   objects: DetectResult | null
   surfaces: SegmentResult | null
+  /** From the hazard detector, e.g. potholes and ladders. */
+  hazards: DetectResult | null
   /** Milliseconds from capture until every model finished. */
   elapsed: number
 }
@@ -16,11 +18,17 @@ export interface Frame {
 const IOU = 0.45
 /** Minimum time between wall updates on live video (4 per second). */
 const WALL_INTERVAL_MS = 250
+/** Minimum time between hazard updates on live video (5 per second). */
+const HAZARD_INTERVAL_MS = 200
+/** Hazards are spoken, so a false alarm costs more than a stray box; they ignore lower settings. */
+const HAZARD_MIN_CONF = 0.3
 
 interface ViewportProps {
   /** Ready-to-run models; null ones are skipped. */
   objects: YoloModel | null
   surfaces: YoloModel | null
+  hazards: YoloModel | null
+  hazardNames: string[]
   source: Source | null
   conf: number
   names: string[]
@@ -44,15 +52,21 @@ async function runFrame(
   media: HTMLVideoElement | HTMLImageElement,
   objects: YoloModel | null,
   surfaces: YoloModel | null,
+  hazards: YoloModel | null,
   conf: number,
 ): Promise<Frame> {
   const t0 = performance.now()
   const options = { conf, iou: IOU }
-  // Both models capture the same frame before either awaits, then run in parallel workers.
-  const [o, s] = await Promise.all([objects?.run(media, options) ?? null, surfaces?.run(media, options) ?? null])
+  // Every model captures the same frame before any awaits, then they run in parallel workers.
+  const [o, s, h] = await Promise.all([
+    objects?.run(media, options) ?? null,
+    surfaces?.run(media, options) ?? null,
+    hazards?.run(media, { conf: Math.max(conf, HAZARD_MIN_CONF), iou: IOU }) ?? null,
+  ])
   return {
     objects: o?.kind === 'detect' ? o : null,
     surfaces: s?.kind === 'semantic' ? s : null,
+    hazards: h?.kind === 'detect' ? h : null,
     elapsed: performance.now() - t0,
   }
 }
@@ -62,6 +76,8 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 export function Viewport({
   objects,
   surfaces,
+  hazards,
+  hazardNames,
   source,
   conf,
   names,
@@ -79,15 +95,26 @@ export function Viewport({
   const [dragging, setDragging] = useState(false)
 
   // The camera loop reads these on every frame without restarting.
-  const latest = useRef({ conf, names, surfaceClasses, hazardClasses, onFrame, onError })
+  const latest = useRef({ conf, names, hazardNames, surfaceClasses, hazardClasses, onFrame, onError })
   useEffect(() => {
-    latest.current = { conf, names, surfaceClasses, hazardClasses, onFrame, onError }
+    latest.current = { conf, names, hazardNames, surfaceClasses, hazardClasses, onFrame, onError }
   })
 
   const show = (frame: Frame, live: boolean) => {
-    const { names, surfaceClasses, hazardClasses, onFrame } = latest.current
-    drawOverlay(canvasRef.current!, { objects: frame.objects, surfaces: frame.surfaces, surfaceClasses, hazardClasses, names })
-    onFrame(frame, live)
+    const { names, hazardNames, surfaceClasses, hazardClasses, onFrame } = latest.current
+    // A staircase often also reads as a "chair"; the stairs highlight names it better.
+    const objects =
+      frame.objects && frame.surfaces ? dropBoxesOnStairs(frame.objects, names, frame.surfaces, hazardClasses) : frame.objects
+    drawOverlay(canvasRef.current!, {
+      objects,
+      surfaces: frame.surfaces,
+      hazards: frame.hazards,
+      surfaceClasses,
+      hazardClasses,
+      names,
+      hazardNames,
+    })
+    onFrame({ ...frame, objects }, live)
   }
 
   useEffect(() => {
@@ -105,11 +132,12 @@ export function Viewport({
   // so the wall model is capped to leave the GPU free for objects.
   useEffect(() => {
     const video = videoRef.current
-    if ((!objects && !surfaces) || !video || source?.kind !== 'camera') return
+    if ((!objects && !surfaces && !hazards) || !video || source?.kind !== 'camera') return
     let cancelled = false
-    const current: Frame = { objects: null, surfaces: null, elapsed: 0 }
+    const current: Frame = { objects: null, surfaces: null, hazards: null, elapsed: 0 }
 
-    const loop = async (model: YoloModel, minInterval: number, setsPace: boolean) => {
+    type Slot = 'objects' | 'surfaces' | 'hazards'
+    const loop = async (model: YoloModel, slot: Slot, minInterval: number, setsPace: boolean) => {
       let failures = 0
       while (!cancelled) {
         const started = performance.now()
@@ -118,11 +146,13 @@ export function Viewport({
         if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth) continue
         try {
           const t0 = performance.now()
-          const result = await model.run(video, { conf: latest.current.conf, iou: IOU })
+          const conf = slot === 'hazards' ? Math.max(latest.current.conf, HAZARD_MIN_CONF) : latest.current.conf
+          const result = await model.run(video, { conf, iou: IOU })
           if (cancelled) return
           failures = 0
-          if (result.kind === 'detect') current.objects = result
-          else current.surfaces = result
+          if (result.kind === 'semantic') current.surfaces = result
+          else if (slot === 'hazards') current.hazards = result
+          else current.objects = result
           if (setsPace) current.elapsed = performance.now() - t0
           show({ ...current }, setsPace)
         } catch (err) {
@@ -134,22 +164,23 @@ export function Viewport({
         if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait))
       }
     }
-    if (objects) loop(objects, 0, true)
-    if (surfaces) loop(surfaces, WALL_INTERVAL_MS, !objects)
+    if (objects) loop(objects, 'objects', 0, true)
+    if (surfaces) loop(surfaces, 'surfaces', WALL_INTERVAL_MS, !objects)
+    if (hazards) loop(hazards, 'hazards', HAZARD_INTERVAL_MS, !objects && !surfaces)
     return () => {
       cancelled = true
     }
     // show() only reads refs.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [objects, surfaces, source])
+  }, [objects, surfaces, hazards, source])
 
   // Image: run once, and again whenever the models, confidence, or highlighted surfaces change.
   const imageReady = source?.kind === 'image' && loadedUrl === source.url
   useEffect(() => {
     const image = imageRef.current
-    if ((!objects && !surfaces) || !image || !imageReady) return
+    if ((!objects && !surfaces && !hazards) || !image || !imageReady) return
     let cancelled = false
-    runFrame(image, objects, surfaces, conf).then(
+    runFrame(image, objects, surfaces, hazards, conf).then(
       (frame) => !cancelled && show(frame, false),
       (err) => !cancelled && latest.current.onError(errorText(err)),
     )
@@ -157,7 +188,7 @@ export function Viewport({
       cancelled = true
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [objects, surfaces, imageReady, conf, surfaceClasses, hazardClasses])
+  }, [objects, surfaces, hazards, imageReady, conf, surfaceClasses, hazardClasses])
 
   const dragHasFiles = (e: DragEvent) => e.dataTransfer.types.includes('Files')
 

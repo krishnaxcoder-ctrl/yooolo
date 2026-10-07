@@ -21,6 +21,7 @@ const SAMPLES: { label: string; source: Source }[] = [
 /** ADE20K classes that mean a change in floor level. */
 const STAIR_NAMES = ['stairs', 'stairway', 'step', 'escalator']
 const NONE: readonly number[] = []
+const NO_NAMES: string[] = []
 const ADD_MODEL_HINT = 'Run "uv run scripts/export_model.py yolo26n" to add one.'
 
 type ModelStatus =
@@ -98,13 +99,14 @@ function useLoadedModel(instance: YoloModel | null, info: ModelInfo | null, engi
 }
 
 export default function App() {
-  const [runners, setRunners] = useState<{ objects: YoloModel; surfaces: YoloModel } | null>(null)
+  const [runners, setRunners] = useState<{ objects: YoloModel; surfaces: YoloModel; hazards: YoloModel } | null>(null)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [modelId, setModelId] = useState<string | null>(null)
   const [engine, setEngine] = useState<EnginePreference>('auto')
   const [manifestError, setManifestError] = useState<string | null>(null)
   const [wallsOn, setWallsOn] = useState(true)
   const [stairsOn, setStairsOn] = useState(true)
+  const [hazardsOn, setHazardsOn] = useState(true)
   const [source, setSource] = useState<Source | null>(null)
   const [conf, setConf] = useState(0.15)
   const [frame, setFrame] = useState<Frame | null>(null)
@@ -116,7 +118,9 @@ export default function App() {
   const fileInput = useRef<HTMLInputElement>(null)
   const lastFrameAt = useRef<number | null>(null)
 
-  const detectModels = models.filter((m) => m.task === 'detect')
+  const detectModels = models.filter((m) => m.task === 'detect' && m.role !== 'hazard')
+  const hazardModel = models.find((m) => m.task === 'detect' && m.role === 'hazard') ?? null
+  const hazardNames = hazardModel?.names ?? NO_NAMES
   const model = detectModels.find((m) => m.id === modelId) ?? null
   const wallModel = models.find((m) => m.task === 'semantic' && m.names.includes('wall')) ?? null
   const wallClasses = useMemo(() => (wallModel ? [wallModel.names.indexOf('wall')] : []), [wallModel])
@@ -129,12 +133,13 @@ export default function App() {
   useEffect(() => {
     // Each model runs in its own worker, so they run in parallel.
     // Workers are external resources, so they're created (and terminated) here rather than during render.
-    const next = { objects: new YoloModel(), surfaces: new YoloModel() }
+    const next = { objects: new YoloModel(), surfaces: new YoloModel(), hazards: new YoloModel() }
     // oxlint-disable-next-line react/set-state-in-effect
     setRunners(next)
     return () => {
       next.objects.dispose()
       next.surfaces.dispose()
+      next.hazards.dispose()
     }
   }, [])
 
@@ -155,6 +160,9 @@ export default function App() {
   const objectStatus = useLoadedModel(runners?.objects ?? null, model, engine)
   // The wall model stays loaded while highlighting is off, so turning it back on is instant.
   const wallStatus = useLoadedModel(runners?.surfaces ?? null, wallModel, engine)
+  // Loaded only while wanted: at 50 MB it's the largest model.
+  const showHazards = hazardsOn && hazardModel !== null
+  const hazardStatus = useLoadedModel(runners?.hazards ?? null, showHazards ? hazardModel : null, engine)
   const status: ModelStatus = manifestError ? { kind: 'error', message: manifestError } : objectStatus
 
   // Release the camera or the image's object URL when the source changes.
@@ -232,8 +240,10 @@ export default function App() {
       ? { label: model.label, fraction: status.fraction }
       : runSurfaces && wallStatus.kind === 'loading'
         ? { label: 'the wall and stairs model', fraction: wallStatus.fraction }
-        : null
-  const errors = [status, runSurfaces ? wallStatus : null].flatMap((s) => (s?.kind === 'error' ? [s.message] : []))
+        : showHazards && hazardStatus.kind === 'loading'
+          ? { label: 'the pothole and ladder model', fraction: hazardStatus.fraction }
+          : null
+  const errors = [status, runSurfaces ? wallStatus : null, showHazards ? hazardStatus : null].flatMap((s) => (s?.kind === 'error' ? [s.message] : []))
   const modelTimes = [
     frame?.objects && `objects ${formatMs(frame.objects.timings.inference)} ms`,
     frame?.surfaces && `walls ${formatMs(frame.surfaces.timings.inference)} ms`,
@@ -243,6 +253,8 @@ export default function App() {
     <Viewport
       objects={status.kind === 'ready' ? runners!.objects : null}
       surfaces={runSurfaces && wallStatus.kind === 'ready' ? runners!.surfaces : null}
+      hazards={showHazards && hazardStatus.kind === 'ready' ? runners!.hazards : null}
+      hazardNames={hazardNames}
       source={source}
       conf={conf}
       names={names}
@@ -401,7 +413,7 @@ export default function App() {
           </div>
 
           <div className="field">
-            <h2 className="field-label">Walls and stairs</h2>
+            <h2 className="field-label">Hazards</h2>
             <label className="toggle">
               <input
                 type="checkbox"
@@ -422,9 +434,19 @@ export default function App() {
               <span className="swatch" style={{ background: HAZARD_COLOR }} />
               Highlight stairs
             </label>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={showHazards}
+                disabled={!hazardModel}
+                onChange={(e) => setHazardsOn(e.target.checked)}
+              />
+              <span className="swatch" style={{ background: HAZARD_COLOR }} />
+              Detect potholes and ladders
+            </label>
             <p className="hint">
               {wallModel
-                ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}.`
+                ? `Uses ${wallModel.label}, ${formatMB(wallModel.bytes)}${hazardModel ? `, and ${hazardModel.label}, ${formatMB(hazardModel.bytes)}` : ''}.`
                 : 'No wall model is installed. Run "uv run scripts/export_model.py yolo26n-sem-ade20k" to add one.'}
             </p>
           </div>
@@ -479,6 +501,8 @@ export default function App() {
           names={names}
           surfaces={frame?.surfaces ?? null}
           stairClasses={showStairs ? stairClasses : NONE}
+          hazardBoxes={frame?.hazards ?? null}
+          hazardNames={hazardNames}
         />
       ) : (
         <VoiceButton onTrip={startTrip} />
